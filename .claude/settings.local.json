@@ -6,7 +6,8 @@
       "Bash(where pnpm *)",
       "Bash(where git *)",
       "Bash(pnpm *)",
-      "PowerShell(Test-Path *)"
+      "PowerShell(Test-Path *)",
+      "PowerShell(New-Item *)"
     ]
   }
 }
