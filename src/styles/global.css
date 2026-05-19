@@ -168,6 +168,56 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
   transform: translateY(-70%) rotate(45deg); pointer-events: none;
 }
 
+/* ===== Segmented control ===== */
+.segmented {
+  background: var(--red);
+  border-radius: 12px;
+  display: grid;
+  overflow: hidden;
+  padding: 3px;
+  box-shadow: 0 2px 8px -2px rgba(230,0,35,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+  gap: 2px;
+}
+.segmented.cols-2 { grid-template-columns: 1fr 1fr; }
+.segmented.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.segmented button {
+  border: 0; height: 38px; background: transparent;
+  color: var(--redText);
+  border-radius: 9px;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px; font-weight: 500; letter-spacing: -0.005em;
+}
+.segmented button:hover:not(.active) { background: rgba(255,255,255,0.12); color: var(--white); }
+.segmented button.active {
+  background: var(--white); color: var(--text-strong);
+  box-shadow: var(--shadow-soft); font-weight: 600;
+}
+
+/* ===== Teeth stepper ===== */
+.stepper {
+  height: 44px; border-radius: 11px;
+  background: var(--white); border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+  display: grid; grid-template-columns: 38px 1fr 38px;
+  overflow: hidden; transition: border-color 0.16s ease;
+}
+.stepper:hover  { border-color: rgba(15,18,23,0.12); }
+.stepper:focus-within { border-color: var(--red); box-shadow: 0 0 0 3px rgba(230,0,35,0.1); }
+.stepper button {
+  border: 0; background: transparent; color: var(--text-muted);
+  font-size: 18px; font-weight: 500;
+  transition: all 0.14s ease;
+}
+.stepper button:hover { background: var(--red-soft); color: var(--red); }
+.stepper input {
+  border: 0; outline: 0; color: var(--text-strong);
+  text-align: center; background: transparent;
+  font-family: var(--font-mono); font-size: 15px; font-weight: 500; min-width: 0;
+}
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
 .result-display {
   height: 44px; padding: 0 16px;
   display: flex; align-items: center; justify-content: flex-end;
