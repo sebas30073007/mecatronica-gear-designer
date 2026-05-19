@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mecatrónica — Gear Designer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      /* Refined palette — same identity, more depth */
+      --red:#e60023;
+      --red-deep:#c8001e;
+      --red-soft:#fff1f2;
+      --text:#52545a;
+      --text-strong:#1a1c1f;
+      --text-muted:#9aa0a6;
+      --white:#ffffff;
+      --redText:#ffe8eb;
+      --bg:#fafbfc;
+      --grid-fine:#eef0f3;
+      --grid-major:#e2e5ea;
+      --black:#0a0c0f;
+      --border:rgba(15, 18, 23, 0.06);
+
+      --shadow-lg:0 12px 32px -8px rgba(15, 18, 23, 0.12), 0 4px 12px -4px rgba(15, 18, 23, 0.06);
+      --shadow:0 4px 14px -2px rgba(15, 18, 23, 0.08), 0 2px 4px -1px rgba(15, 18, 23, 0.04);
+      --shadow-soft:0 2px 6px -1px rgba(15, 18, 23, 0.06), 0 1px 2px -1px rgba(15, 18, 23, 0.04);
+      --shadow-inset:inset 0 0 0 1px rgba(15, 18, 23, 0.04);
+
+      --radius:16px;
+      --radius-md:12px;
+      --radius-sm:10px;
+
+      --font-display:"Space Grotesk", "Segoe UI", system-ui, sans-serif;
+      --font:"Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono:"JetBrains Mono", ui-monospace, monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;font-family:var(--font);color:var(--text);background:var(--bg);overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+    button,input,select{font:inherit;color:inherit}
+    button{cursor:pointer;user-select:none}
+    input:focus-visible, select:focus-visible, button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+    /* ===== Background: layered grid (fine + major) ===== */
+    .app{
+      width:100vw;height:100vh;position:relative;
+      background:
+        linear-gradient(var(--grid-fine) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-fine) 1px, transparent 1px),
+        var(--bg);
+      background-size:24px 24px;
+    }
+    .app:after{
+      content:"";position:absolute;inset:86px 0 0 0;pointer-events:none;
+      background:
+        linear-gradient(var(--grid-major) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+        radial-gradient(ellipse 800px 500px at 60% 50%, rgba(230, 0, 35, 0.025), transparent 70%);
+      background-size:120px 120px, 120px 120px, 100% 100%;
+    }
+
+    /* ===== Topbar ===== */
+    .topbar{
+      height:86px;
+      background:rgba(255,255,255,0.85);
+      backdrop-filter:blur(12px);
+      -webkit-backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);
+      box-shadow:0 1px 0 rgba(15,18,23,0.02), 0 4px 16px -8px rgba(15,18,23,0.08);
+      position:relative;z-index:20;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 26px 0 14px;
+    }
+    .logo{
+      height:54px;padding:0 22px;min-width:242px;
+      background:var(--white);
+      border-radius:14px;
+      box-shadow:var(--shadow-soft), var(--shadow-inset);
+      display:flex;align-items:center;justify-content:center;
+      color:var(--red);
+      font-family:var(--font-display);
+      font-weight:700;font-size:26px;letter-spacing:0.2px;
+    }
+    .gear-o{width:38px;height:38px;margin:0 -1px;position:relative;display:inline-block;vertical-align:middle}
+    .gear-o:before{
+      content:"";position:absolute;inset:3px;border-radius:50%;background:var(--red);
+      clip-path:polygon(50% 0%,58% 12%,72% 7%,78% 21%,93% 22%,88% 38%,100% 50%,88% 62%,93% 78%,78% 79%,72% 93%,58% 88%,50% 100%,42% 88%,28% 93%,22% 79%,7% 78%,12% 62%,0% 50%,12% 38%,7% 22%,22% 21%,28% 7%,42% 12%);
+      animation:spin-slow 18s linear infinite;
+      transform-origin:center;
+    }
+    .gear-o:after{content:"";position:absolute;inset:13px;border-radius:50%;background:var(--white)}
+    @keyframes spin-slow{ to { transform:rotate(360deg); } }
+
+    /* Center project label in topbar */
+    .topbar-center{
+      display:flex;flex-direction:column;align-items:center;gap:2px;
+    }
+    .topbar-crumb{
+      font-family:var(--font-mono);
+      font-size:11px;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      color:var(--text-muted);
+    }
+    .topbar-crumb .sep{margin:0 8px;opacity:0.4}
+    .topbar-crumb .current{color:var(--text-strong)}
+    .topbar-title{
+      font-family:var(--font-display);
+      font-size:15px;
+      font-weight:500;
+      color:var(--text-strong);
+      letter-spacing:-0.01em;
+    }
+
+    .topbar-actions{display:flex;align-items:center;gap:10px}
+    .icon-action{
+      width:42px;height:42px;border:none;background:transparent;
+      color:var(--text);display:grid;place-items:center;
+      border-radius:10px;transition:all 0.16s ease;
+    }
+    .icon-action:hover{background:var(--red-soft);color:var(--red)}
+    .icon-action svg{width:20px;height:20px;stroke-width:2}
+
+    .download{
+      height:42px;padding:0 18px;border:none;
+      background:var(--red);color:var(--white);
+      display:flex;align-items:center;gap:8px;
+      border-radius:10px;
+      font-family:var(--font);font-weight:500;font-size:14px;
+      box-shadow:0 4px 12px -2px rgba(230, 0, 35, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+      transition:all 0.16s ease;
+    }
+    .download:hover{background:var(--red-deep);transform:translateY(-1px);box-shadow:0 6px 16px -2px rgba(230, 0, 35, 0.4)}
+    .download:active{transform:translateY(0)}
+    .download svg{width:16px;height:16px;stroke-width:2.5}
+
+    /* ===== Panels ===== */
+    .panel{
+      background:rgba(255,255,255,0.96);
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow-lg);
+      border:1px solid var(--border);
+      position:absolute;z-index:10;
+    }
+    .left-panel{top:108px;left:18px;width:360px;padding:24px 24px 28px;max-height:calc(100vh - 126px);overflow-y:auto}
+    .left-panel::-webkit-scrollbar{width:6px}
+    .left-panel::-webkit-scrollbar-track{background:transparent}
+    .left-panel::-webkit-scrollbar-thumb{background:var(--grid-major);border-radius:3px}
+
+    .right-panel{top:108px;right:20px;width:360px;height:calc(100vh - 126px);padding:24px;display:none}
+    .right-panel.visible{display:block}
+
+    /* ===== Fields: refined hierarchy ===== */
+    .field{margin-bottom:22px}
+    .field:last-child{margin-bottom:0}
+
+    .field-title{
+      font-family:var(--font);
+      font-size:11px;
+      line-height:1;
+      margin:0 0 12px;
+      font-weight:600;
+      letter-spacing:0.1em;
+      text-transform:uppercase;
+      color:var(--text-muted);
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .field-title::after{
+      content:"";
+      flex:1;
+      height:1px;
+      background:linear-gradient(to right, var(--border), transparent);
+    }
+
+    .mini-label{
+      text-align:center;
+      font-family:var(--font-mono);
+      font-size:10px;
+      letter-spacing:0.06em;
+      text-transform:uppercase;
+      color:var(--text-muted);
+      margin-top:8px;
+    }
+
+    /* ===== Segmented controls ===== */
+    .segmented{
+      background:var(--red);
+      border-radius:12px;
+      display:grid;
+      overflow:hidden;
+      padding:3px;
+      box-shadow:0 2px 8px -2px rgba(230, 0, 35, 0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+      gap:2px;
+    }
+    .segmented.three{grid-template-columns:1fr 1fr 1fr}
+    .segmented.two{grid-template-columns:1fr 1fr}
+    .segmented.four{grid-template-columns:1fr 1fr 1fr 1fr}
+
+    .segmented button{
+      border:0;height:38px;background:transparent;
+      color:var(--redText);
+      border-radius:9px;
+      transition:all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size:13px;
+      font-weight:500;
+      letter-spacing:-0.005em;
+    }
+    .segmented button:hover:not(.active){background:rgba(255,255,255,0.12);color:var(--white)}
+    .segmented button.active{
+      background:var(--white);
+      color:var(--text-strong);
+      box-shadow:var(--shadow-soft);
+      font-weight:600;
+    }
+
+    /* ===== Ratio row ===== */
+    .ratio-row{display:grid;grid-template-columns:1fr 24px 1fr;align-items:center;gap:10px}
+    .ratio-row + .ratio-row{margin-top:6px}
+
+    .input-pill{
+      border:1px solid var(--border);outline:none;
+      border-radius:11px;background:var(--white);
+      box-shadow:var(--shadow-soft);
+      color:var(--text-strong);
+      font-family:var(--font-mono);
+      font-size:15px;
+      font-weight:500;
+      height:44px;
+      text-align:center;
+      transition:all 0.16s ease;
+    }
+    .input-pill:hover{border-color:rgba(15,18,23,0.12)}
+    .input-pill:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(230, 0, 35, 0.1)}
+
+    .text-input{
+      border:1px solid var(--border);outline:none;
+      border-radius:11px;background:var(--white);
+      box-shadow:var(--shadow-soft);
+      color:var(--text-strong);
+      font-family:var(--font-mono);
+      font-size:14px;
+      font-weight:500;
+      height:44px;padding:0 16px;
+      width:100%;
+      transition:all 0.16s ease;
+    }
+    .text-input:hover{border-color:rgba(15,18,23,0.12)}
+    .text-input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(230, 0, 35, 0.1)}
+
+    .select-wrap{width:100%;position:relative}
+    select.text-input{appearance:none;-webkit-appearance:none;padding-right:42px;cursor:pointer}
+    .select-wrap:after{
+      content:"";
+      position:absolute;
+      right:18px;top:50%;
+      width:8px;height:8px;
+      border-right:2px solid var(--text);
+      border-bottom:2px solid var(--text);
+      transform:translateY(-70%) rotate(45deg);
+      pointer-events:none;
+    }
+
+    .colon{
+      color:var(--text-strong);
+      text-align:center;
+      font-family:var(--font-mono);
+      font-weight:600;
+      font-size:18px;
+    }
+
+    /* ===== Teeth row + stepper ===== */
+    .teeth-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+
+    .stepper{
+      height:44px;
+      border-radius:11px;
+      background:var(--white);
+      border:1px solid var(--border);
+      box-shadow:var(--shadow-soft);
+      display:grid;grid-template-columns:38px 1fr 38px;
+      overflow:hidden;
+      transition:border-color 0.16s ease;
+    }
+    .stepper:hover{border-color:rgba(15,18,23,0.12)}
+    .stepper:focus-within{border-color:var(--red);box-shadow:0 0 0 3px rgba(230, 0, 35, 0.1)}
+    .stepper button{
+      border:0;background:transparent;
+      color:var(--text-muted);
+      font-size:18px;font-weight:500;
+      transition:all 0.14s ease;
+    }
+    .stepper button:hover{background:var(--red-soft);color:var(--red)}
+    .stepper input{
+      border:0;outline:0;
+      color:var(--text-strong);
+      text-align:center;background:transparent;
+      font-family:var(--font-mono);
+      font-size:15px;font-weight:500;
+      min-width:0;
+    }
+
+    /* ===== View toggle (2D/3D) ===== */
+    .view-toggle{
+      position:absolute;z-index:12;top:108px;right:18px;
+      display:grid;grid-template-columns:58px 58px;
+      background:var(--red);border-radius:12px;
+      padding:3px;gap:2px;
+      box-shadow:0 4px 12px -2px rgba(230, 0, 35, 0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    .view-toggle.with-panel{right:398px}
+    .view-toggle button{
+      border:0;height:38px;
+      background:transparent;color:var(--redText);
+      border-radius:9px;
+      font-family:var(--font-display);
+      font-size:14px;font-weight:600;
+      letter-spacing:0.02em;
+      transition:all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .view-toggle button:hover:not(.active){background:rgba(255,255,255,0.12);color:var(--white)}
+    .view-toggle button.active{
+      color:var(--text-strong);
+      background:var(--white);
+      box-shadow:var(--shadow-soft);
+    }
+
+    /* ===== Stage ===== */
+    .stage{
+      position:absolute;inset:86px 0 0 0;z-index:5;
+      display:grid;place-items:center;pointer-events:none;
+      transition:transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .stage svg{width:min(560px,46vw);height:auto;overflow:visible;pointer-events:auto}
+    .stage.mode-3d{transform:translateX(-40px)}
+
+    .gear{fill:var(--white);stroke:var(--black);stroke-width:7;stroke-linejoin:round;stroke-linecap:round;transition:filter 0.22s ease}
+    .gear-hole{fill:var(--bg);stroke:var(--black);stroke-width:6}
+    .gear-center{fill:var(--red);stroke:none}
+    .axis-line{stroke:var(--text-muted);stroke-width:1;stroke-dasharray:4 4;opacity:0.5}
+    .pitch-circle{fill:none;stroke:var(--red);stroke-width:1;stroke-dasharray:3 4;opacity:0.4}
+
+    .gear-3d-shadow{opacity:0;transition:opacity 0.22s ease}
+    .stage.mode-3d .gear-3d-shadow{opacity:0.14}
+    .stage.mode-3d .gear{filter:drop-shadow(8px 8px 0 rgba(10, 12, 15, 0.14))}
+
+    /* Annotation badges floating in stage */
+    .stage-annotation{
+      position:absolute;
+      font-family:var(--font-mono);
+      font-size:10px;
+      letter-spacing:0.06em;
+      text-transform:uppercase;
+      color:var(--text-strong);
+      background:var(--white);
+      border:1px solid var(--border);
+      padding:6px 10px;
+      border-radius:8px;
+      box-shadow:var(--shadow-soft);
+      pointer-events:auto;
+      display:flex;align-items:center;gap:6px;
+    }
+    .stage-annotation .ann-dot{
+      width:6px;height:6px;border-radius:50%;background:var(--red);
+    }
+    .stage-annotation .ann-label{color:var(--text-muted)}
+    .stage-annotation .ann-value{color:var(--text-strong);font-weight:500}
+    .ann-tl{top:32px;left:50%;transform:translateX(-180px)}
+    .ann-br{bottom:32px;left:50%;transform:translateX(60px)}
+
+    @media(max-width:1100px){
+      .right-panel.visible{display:none}
+      .view-toggle.with-panel{right:18px}
+      .stage.mode-3d{transform:none}
+      .topbar-center{display:none}
+    }
+    @media(max-width:760px){
+      body{overflow:auto}
+      .app{min-height:100vh;height:auto;overflow:visible}
+      .topbar{position:sticky;top:0}
+      .logo{min-width:205px;font-size:22px}
+      .left-panel{position:relative;top:auto;left:auto;width:calc(100% - 32px);margin:22px 16px;max-height:none}
+      .view-toggle{position:relative;top:auto;right:auto;margin:12px 16px;width:124px;margin-left:auto}
+      .stage{position:relative;inset:auto;height:430px}
+      .stage svg{width:70vw}
+      .right-panel.visible{display:block;position:relative;top:auto;right:auto;width:calc(100% - 32px);height:auto;margin:0 16px 24px}
+      .teeth-row{grid-template-columns:1fr 1fr;gap:14px}
+      .stage-annotation{display:none}
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="logo">MECATR<span class="gear-o"></span>NICA</div>
+
+      <div class="topbar-center">
+        <div class="topbar-crumb">
+          <span>Projects</span><span class="sep">/</span><span class="current">Reductora-01</span>
+        </div>
+        <div class="topbar-title">Gear Designer</div>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="icon-action" title="Compartir">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+        <button class="icon-action" title="Historial">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+        </button>
+        <button class="download" title="Descargar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+          Export
+        </button>
+      </div>
+    </header>
+
+    <aside class="panel left-panel">
+      <section class="field">
+        <h2 class="field-title">Type</h2>
+        <div class="segmented three" data-group>
+          <button class="active">Simple</button>
+          <button>Compound</button>
+          <button>Planetary</button>
+        </div>
+      </section>
+
+      <section class="field">
+        <h2 class="field-title">Ratio Target</h2>
+        <div class="ratio-row">
+          <input class="input-pill" id="ratioOutput" value="3.5" inputmode="decimal">
+          <span class="colon">:</span>
+          <input class="input-pill" id="ratioInput" value="1" inputmode="decimal">
+        </div>
+        <div class="ratio-row">
+          <div class="mini-label">Output</div>
+          <div></div>
+          <div class="mini-label">Input</div>
+        </div>
+      </section>
+
+      <section class="field">
+        <h2 class="field-title">Teeth</h2>
+        <div class="teeth-row">
+          <div>
+            <div class="stepper">
+              <button data-step="out" data-delta="-1">−</button>
+              <input id="teethOut" value="54" inputmode="numeric">
+              <button data-step="out" data-delta="1">+</button>
+            </div>
+            <div class="mini-label">Output</div>
+          </div>
+          <div>
+            <div class="stepper">
+              <button data-step="in" data-delta="-1">−</button>
+              <input id="teethIn" value="18" inputmode="numeric">
+              <button data-step="in" data-delta="1">+</button>
+            </div>
+            <div class="mini-label">Input</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="field">
+        <h2 class="field-title">Center Distance</h2>
+        <input class="text-input" id="centerDistance" value="120.00 mm">
+      </section>
+
+      <section class="field">
+        <h2 class="field-title">Module</h2>
+        <div class="select-wrap">
+          <select class="text-input" id="module">
+            <option>2.00 mm</option>
+            <option>1.50 mm</option>
+            <option>2.50 mm</option>
+            <option>3.00 mm</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="field">
+        <h2 class="field-title">Pressure Angle</h2>
+        <div class="segmented three" data-group>
+          <button class="active">14.5°</button>
+          <button>20°</button>
+          <button>25°</button>
+        </div>
+      </section>
+
+      <section class="field" style="margin-bottom:8px">
+        <h2 class="field-title">Units</h2>
+        <div class="segmented two" data-group>
+          <button class="active">mm</button>
+          <button>in</button>
+        </div>
+      </section>
+    </aside>
+
+    <div class="view-toggle" id="viewToggle">
+      <button id="btn2d" class="active">2D</button>
+      <button id="btn3d">3D</button>
+    </div>
+
+    <section class="stage" id="stage" aria-label="Gear preview">
+      <div class="stage-annotation ann-tl">
+        <span class="ann-dot"></span>
+        <span class="ann-label">Ratio</span>
+        <span class="ann-value" id="annRatio">3.0 : 1</span>
+      </div>
+      <div class="stage-annotation ann-br">
+        <span class="ann-dot" style="background:var(--text-strong)"></span>
+        <span class="ann-label">Module</span>
+        <span class="ann-value">2.00 mm</span>
+      </div>
+
+      <svg viewBox="0 0 620 420">
+        <defs>
+          <path id="bigGearPath" d="" />
+          <path id="smallGearPath" d="" />
+        </defs>
+
+        <!-- Axis line between centers (technical touch) -->
+        <line class="axis-line" x1="225" y1="300" x2="390" y2="180"/>
+
+        <!-- Pitch circles (subtle) -->
+        <circle class="pitch-circle" cx="390" cy="180" r="115"/>
+        <circle class="pitch-circle" cx="225" cy="300" r="73"/>
+
+        <!-- 3D shadow layer -->
+        <g class="gear-3d-shadow">
+          <use href="#bigGearPath" transform="translate(10 10)" fill="none" stroke="#000" stroke-width="7" stroke-linejoin="round"/>
+          <use href="#smallGearPath" transform="translate(10 10)" fill="none" stroke="#000" stroke-width="7" stroke-linejoin="round"/>
+          <circle cx="390" cy="180" r="72" fill="none" stroke="#000" stroke-width="6" transform="translate(10 10)"/>
+          <circle cx="225" cy="300" r="47" fill="none" stroke="#000" stroke-width="6" transform="translate(10 10)"/>
+        </g>
+
+        <!-- Gears -->
+        <use href="#bigGearPath" class="gear" />
+        <use href="#smallGearPath" class="gear" />
+        <circle class="gear-hole" cx="390" cy="180" r="72"/>
+        <circle class="gear-hole" cx="225" cy="300" r="47"/>
+
+        <!-- Center marks (red dots — subtle utility accent) -->
+        <circle class="gear-center" cx="390" cy="180" r="4"/>
+        <circle class="gear-center" cx="225" cy="300" r="4"/>
+      </svg>
+    </section>
+
+    <aside class="panel right-panel" id="rightPanel">
+      <section class="field">
+        <h2 class="field-title">Thickness</h2>
+        <input class="text-input" value="10.00 mm">
+      </section>
+      <section class="field">
+        <h2 class="field-title">Helical Angle</h2>
+        <div class="segmented four" data-group>
+          <button class="active">14.5°</button>
+          <button>20°</button>
+          <button>25°</button>
+          <button>30°</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const stage=document.getElementById("stage"),rightPanel=document.getElementById("rightPanel"),viewToggle=document.getElementById("viewToggle"),btn2d=document.getElementById("btn2d"),btn3d=document.getElementById("btn3d");
+    const teethOut=document.getElementById("teethOut"),teethIn=document.getElementById("teethIn"),ratioOutput=document.getElementById("ratioOutput"),annRatio=document.getElementById("annRatio");
+    const bigGearPath=document.getElementById("bigGearPath"),smallGearPath=document.getElementById("smallGearPath");
+
+    function makeGearPath(cx,cy,innerR,outerR,teeth){
+      const steps=teeth*2; let d="";
+      for(let i=0;i<steps;i++){
+        const a=-Math.PI/2+(Math.PI*2*i/steps), r=i%2===0?outerR:innerR;
+        const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+        d += `${i===0?"M":"L"} ${x.toFixed(2)} ${y.toFixed(2)} `;
+      }
+      return d+"Z";
+    }
+
+    function redraw(){
+      const out=Math.max(8,Math.min(90,parseInt(teethOut.value||"54",10)));
+      const input=Math.max(8,Math.min(50,parseInt(teethIn.value||"18",10)));
+      teethOut.value=out; teethIn.value=input;
+      const ratio=(out/input).toFixed(1);
+      ratioOutput.value=ratio;
+      if(annRatio) annRatio.textContent=`${ratio} : 1`;
+      bigGearPath.setAttribute("d",makeGearPath(390,180,96,138,Math.round(out/4.5)));
+      smallGearPath.setAttribute("d",makeGearPath(225,300,64,88,Math.round(input/2.1)));
+    }
+
+    function setMode(mode){
+      if(mode==="3d"){
+        btn3d.classList.add("active"); btn2d.classList.remove("active");
+        rightPanel.classList.add("visible"); viewToggle.classList.add("with-panel"); stage.classList.add("mode-3d");
+      }else{
+        btn2d.classList.add("active"); btn3d.classList.remove("active");
+        rightPanel.classList.remove("visible"); viewToggle.classList.remove("with-panel"); stage.classList.remove("mode-3d");
+      }
+    }
+
+    btn2d.addEventListener("click",()=>setMode("2d"));
+    btn3d.addEventListener("click",()=>setMode("3d"));
+
+    document.querySelectorAll("[data-group]").forEach(group=>{
+      group.querySelectorAll("button").forEach(button=>{
+        button.addEventListener("click",()=>{
+          group.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
+          button.classList.add("active");
+        });
+      });
+    });
+
+    document.querySelectorAll("[data-step]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        const target=button.dataset.step==="out"?teethOut:teethIn;
+        target.value=Number(target.value||0)+Number(button.dataset.delta);
+        redraw();
+      });
+    });
+
+    teethOut.addEventListener("input",redraw);
+    teethIn.addEventListener("input",redraw);
+    redraw(); setMode("2d");
+  </script>
+</body>
+</html>

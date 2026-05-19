@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(where pnpm *)",
+      "Bash(where git *)",
+      "Bash(pnpm *)",
+      "PowerShell(Test-Path *)"
+    ]
+  }
+}
