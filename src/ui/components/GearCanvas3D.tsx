@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type * as T3 from 'three';
 import type { SpurGear } from '../../core/gearTypes';
 import { generateSpurGearOutline } from '../../geometry/spurGear2D';
 
-type GearStyle = 'blueprint' | 'wireframe';
 type TM = typeof T3;
 
 const RED   = 0xc8202a;
@@ -53,23 +52,17 @@ function fitCamera(THREE: TM, camera: T3.PerspectiveCamera, g1: SpurGear, g2: Sp
 
 export default function GearCanvas3D({ g1, g2, moduleMm, pa }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [style, setStyle] = useState<GearStyle>('blueprint');
 
   // Scene object refs (populated after Three.js loads)
   const threeRef  = useRef<TM | null>(null);
   const cameraRef = useRef<T3.PerspectiveCamera | null>(null);
   const groupRef  = useRef<T3.Group | null>(null);
   const gridRef   = useRef<T3.GridHelper | null>(null);
-  const pivot1Ref = useRef<T3.Group | null>(null);   // g1 spin pivot
-  const pivot2Ref = useRef<T3.Group | null>(null);   // g2 spin pivot
-  const fillsRef  = useRef<T3.Mesh[]>([]);
-  const oldGeoRef = useRef<(() => void) | null>(null); // dispose callback
-
-  // Live animation state (read by tick loop)
-  const styleRef      = useRef<GearStyle>('blueprint');
-  const applyStyleRef = useRef<((s: GearStyle) => void) | null>(null);
-  const ratioRef      = useRef({ z1: g1.teeth, z2: g2.teeth });
-  const spinRef       = useRef({ s1: 0, s2: 0 });
+  const pivot1Ref = useRef<T3.Group | null>(null);
+  const pivot2Ref = useRef<T3.Group | null>(null);
+  const oldGeoRef = useRef<(() => void) | null>(null);
+  const ratioRef  = useRef({ z1: g1.teeth, z2: g2.teeth });
+  const spinRef   = useRef({ s1: 0, s2: 0 });
 
   // ── Rebuild gear content inside existing pivots ───────────────────────────
   function rebuildGears(THREE: TM) {
@@ -119,12 +112,8 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa }: Props) {
     pivot1.add(fill1, lines1);
     pivot2.add(fill2, lines2);
 
-    // Track fills for style toggle
-    fillsRef.current = [fill1, fill2];
-
-    // Apply current style immediately
-    const s = styleRef.current;
-    fill1.visible = fill2.visible = s === 'wireframe';
+    // Wireframe: fills always visible
+    fill1.visible = fill2.visible = true;
 
     // Dispose old, register new
     oldGeoRef.current?.();
@@ -132,7 +121,7 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa }: Props) {
 
     // Update animation state
     ratioRef.current = { z1: g1.teeth, z2: g2.teeth };
-    spinRef.current  = { s1: 0, s2: Math.PI / g2.teeth }; // half-tooth offset for mesh
+    spinRef.current  = { s1: 0, s2: (g2.teeth - 1) * Math.PI / g2.teeth };
   }
 
   // ── Initial Three.js bootstrap (once) ───────────────────────────────────
@@ -178,12 +167,6 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa }: Props) {
 
       // Build geometry for the initial props
       rebuildGears(THREE);
-
-      // Style: only toggle fills; grid always stays on
-      applyStyleRef.current = (s: GearStyle) => {
-        fillsRef.current.forEach(f => (f.visible = s === 'wireframe'));
-      };
-      applyStyleRef.current(styleRef.current);
 
       // ── Drag rotation ───────────────────────────────────────────────────
       let rotY = 0.4, rotX = 0.2, dragging = false, lx = 0, ly = 0;
@@ -240,7 +223,6 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa }: Props) {
         renderer.dispose();
         threeRef.current = cameraRef.current = groupRef.current = null;
         pivot1Ref.current = pivot2Ref.current = null;
-        applyStyleRef.current = null;
       };
     })();
 
@@ -256,22 +238,9 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [g1.teeth, g2.teeth, g1.boreDiameterMm, g2.boreDiameterMm, moduleMm, pa]);
 
-  // ── Sync style state → renderer (instant, no rebuild) ────────────────────
-  useEffect(() => {
-    styleRef.current = style;
-    applyStyleRef.current?.(style);
-  }, [style]);
-
   return (
     <div className="gear3d-wrap">
       <canvas ref={canvasRef} className="gear3d-canvas" />
-      <button
-        className="gear3d-style-btn"
-        onClick={() => setStyle(s => s === 'blueprint' ? 'wireframe' : 'blueprint')}
-        title="Toggle visual style"
-      >
-        {style === 'blueprint' ? '◻ Blueprint' : '◼ Wireframe'}
-      </button>
     </div>
   );
 }

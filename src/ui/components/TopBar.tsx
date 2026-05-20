@@ -11,7 +11,7 @@ interface Props {
 export default function TopBar({ debug, showRuler, onDebugToggle, onRulerToggle, onExportClick }: Props) {
   return (
     <header className="topbar">
-      <div className="logo">MECATR<span className="gear-o" aria-hidden="true" /></div>
+      <div className="logo">MECATR<span className="gear-o" aria-hidden="true" />NICA</div>
       <div className="topbar-center">
         <div className="topbar-crumb">
           <span>Projects</span><span className="sep">/</span><span className="current">Reductora-01</span>
