@@ -311,7 +311,6 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
   padding: 3px; gap: 2px;
   box-shadow: 0 4px 12px -2px rgba(230, 0, 35, 0.3), inset 0 1px 0 rgba(255,255,255,0.15);
 }
-.view-toggle.with-panel { right: 398px; }
 .view-toggle button {
   border: 0; height: 38px;
   background: transparent; color: var(--redText);
@@ -323,9 +322,33 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .view-toggle button:hover:not(.active) { background: rgba(255,255,255,0.12); color: var(--white); }
 .view-toggle button.active { color: var(--text-strong); background: var(--white); box-shadow: var(--shadow-soft); }
 
-/* ===== Right panel ===== */
-.right-panel { top: 108px; right: 20px; width: 360px; height: calc(100vh - 126px); padding: 24px; display: none; }
-.right-panel.visible { display: block; }
+/* ===== Left panel divider ===== */
+.left-panel-divider {
+  height: 1px; background: var(--border);
+  margin: 14px 0 16px;
+}
+.fab-check-list { display: flex; flex-direction: column; gap: 7px; }
+.fab-check {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13px; color: var(--text-strong); cursor: pointer; user-select: none;
+}
+.fab-check input[type="checkbox"] {
+  width: 16px; height: 16px; border-radius: 4px; cursor: pointer;
+  accent-color: var(--red);
+}
+.fab-hint {
+  margin: 6px 0 0; font-size: 11px; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.fab-export-col { display: flex; flex-direction: column; gap: 6px; }
+.fab-export-btn {
+  width: 100%; height: 38px; border: 1px solid var(--red);
+  background: var(--red-soft); color: var(--red);
+  border-radius: 10px;
+  font-family: var(--font); font-size: 13px; font-weight: 500;
+  transition: all 0.15s ease;
+}
+.fab-export-btn:hover:not(:disabled) { background: var(--red); color: var(--white); }
 
 /* ===== Stage annotations ===== */
 .stage-annotation {
@@ -344,13 +367,138 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .ann-tl { top: 32px; left: 50%; transform: translateX(-180px); }
 .ann-br { bottom: 32px; left: 50%; transform: translateX(60px); }
 
-/* ===== 3D mode ===== */
-.stage.mode-3d { transform: translateX(-40px); transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1); }
+/* ===== Stage 3D — Three.js canvas fills the stage ===== */
+.stage--three {
+  display: block !important;
+}
+
+/* ===== Three.js gear canvas ===== */
+.gear3d-wrap {
+  position: absolute; inset: 0;
+  pointer-events: auto;
+}
+.gear3d-canvas {
+  width: 100%; height: 100%;
+  display: block;
+  cursor: grab;
+}
+.gear3d-canvas:active { cursor: grabbing; }
+
+.gear3d-style-btn {
+  position: absolute; bottom: 22px; right: 22px; z-index: 8;
+  height: 34px; padding: 0 14px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-soft);
+  font-family: var(--font-mono); font-size: 11px;
+  font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-strong);
+  transition: all 0.14s ease;
+  pointer-events: auto;
+}
+.gear3d-style-btn:hover {
+  background: var(--red-soft); color: var(--red);
+  border-color: var(--red);
+}
+
+/* ===== App frozen (modal open) ===== */
+.app-frozen { pointer-events: none; }
+.app-frozen .topbar,
+.app-frozen .left-panel,
+.app-frozen .view-toggle,
+.app-frozen .stage { pointer-events: none; filter: brightness(0.97); }
+
+/* ===== Export modal ===== */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(10, 12, 16, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: all;
+}
+
+.export-modal {
+  background: var(--white);
+  border-radius: 18px;
+  box-shadow: 0 24px 64px -12px rgba(10,12,16,0.3), 0 0 0 1px rgba(10,12,16,0.06);
+  width: min(880px, 94vw);
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.export-modal-header {
+  padding: 18px 22px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.export-modal-title {
+  font-family: var(--font-display); font-size: 16px; font-weight: 600;
+  color: var(--text-strong); letter-spacing: -0.01em;
+}
+.modal-close-btn {
+  width: 34px; height: 34px; border: none;
+  background: transparent; color: var(--text-muted);
+  display: grid; place-items: center; border-radius: 8px;
+  transition: all 0.14s ease;
+}
+.modal-close-btn:hover { background: var(--red-soft); color: var(--red); }
+.modal-close-btn svg { width: 16px; height: 16px; }
+
+.export-modal-body {
+  display: flex; flex: 1; overflow: hidden; min-height: 460px;
+}
+
+.export-modal-preview {
+  flex: 1; background: #f7f8f9;
+  border-right: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  padding: 28px; overflow: hidden;
+}
+.export-preview-img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  background: white;
+  box-shadow: 0 2px 16px -4px rgba(10,12,16,0.12), 0 0 0 1px rgba(10,12,16,0.06);
+}
+
+.export-modal-settings {
+  width: 276px; flex-shrink: 0;
+  padding: 20px 22px 22px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+.export-setting-group { display: flex; flex-direction: column; gap: 8px; }
+.export-setting-label {
+  font-family: var(--font); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.export-setting-label::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(to right, var(--border), transparent);
+}
+
+.export-modal-btn {
+  margin-top: auto;
+  width: 100%; height: 44px;
+  background: var(--red); color: var(--white); border: none;
+  border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font); font-size: 14px; font-weight: 600;
+  box-shadow: 0 4px 12px -2px rgba(230,0,35,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: all 0.16s ease;
+}
+.export-modal-btn:hover { background: var(--red-deep); transform: translateY(-1px); }
+.export-modal-btn:active { transform: translateY(0); }
+.export-modal-btn svg { width: 16px; height: 16px; stroke-width: 2.5; }
 
 /* ===== Responsive ===== */
 @media (max-width: 1100px) {
-  .right-panel.visible { display: none; }
-  .view-toggle.with-panel { right: 18px; }
+  .view-toggle { right: 18px; }
   .stage.mode-3d { transform: none; }
   .topbar-center { display: none; }
 }
@@ -363,6 +511,8 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
   .view-toggle { position: relative; top: auto; right: auto; width: 124px; margin: 12px 16px 12px auto; }
   .stage { position: relative; inset: auto; height: 430px; }
   .stage svg { width: 70vw; }
-  .right-panel.visible { display: block; position: relative; top: auto; right: auto; width: calc(100% - 32px); height: auto; margin: 0 16px 24px; }
   .stage-annotation { display: none; }
+  .export-modal-body { flex-direction: column; }
+  .export-modal-preview { border-right: none; border-bottom: 1px solid var(--border); min-height: 220px; }
+  .export-modal-settings { width: 100%; }
 }

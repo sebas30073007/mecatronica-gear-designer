@@ -9,6 +9,7 @@ import type { GearExportParams } from './svgExport';
 export interface DxfExportOptions {
   showConstruction?: boolean;
   showPitchCircle?: boolean;
+  kerfOffsetMm?: number;  // applied in R3 — field accepted but not yet used
 }
 
 const f = (n: number) => n.toFixed(4);

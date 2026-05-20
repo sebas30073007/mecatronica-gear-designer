@@ -12,7 +12,18 @@ export type GearKind =
 
 export type GearConnection = 'mesh' | 'sameAxis' | 'fixed' | 'free';
 
-export type ActiveMode = 'simple' | 'compound' | 'planetary' | 'library';
+export type ActiveMode =
+  | 'simple'
+  | 'planetary'
+  | 'internal'
+  | 'rack-pinion'
+  | 'compound'
+  | 'helical'
+  | 'bevel'
+  | 'herringbone';
+
+export const MODES_3D_ONLY: ActiveMode[] = ['compound', 'helical', 'bevel', 'herringbone'];
+export const is3dOnly = (mode: ActiveMode) => MODES_3D_ONLY.includes(mode);
 
 export type ViewMode = '2d' | '3d';
 
@@ -78,4 +89,34 @@ export interface GearDesignState {
   planetarySets: PlanetaryGearSet[];
   selectedId?: string;
   view: GearView;
+}
+
+// ── Fabrication state (store-only, not serialized to URL) ─────────────────────
+
+export type FabricationMode = '2d-laser' | '3d-print';
+
+export interface FabricationState2D {
+  showOutline: boolean;
+  showCenters: boolean;
+  showLabels: boolean;
+  showPitchCircles: boolean;
+  kerfOffsetMm: number;
+}
+
+export interface FabricationState3D {
+  faceWidthMm: number;
+  boreDiameterMm: number;
+  hubEnabled: boolean;
+  hubDiameterMm: number;
+  hubHeightMm: number;
+  exportFormat: 'stl' | 'step';
+}
+
+export type GearTypeStatus = 'ready' | 'beta' | 'coming-soon' | 'later';
+
+export interface GearTypeEntry {
+  value: ActiveMode;
+  label: string;
+  view: '2d-3d' | '3d-only';
+  status: GearTypeStatus;
 }

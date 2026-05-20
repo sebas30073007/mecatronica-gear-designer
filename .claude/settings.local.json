@@ -15,7 +15,15 @@
       "Bash(node -e ' *)",
       "Bash(node --input-type=module)",
       "Bash(npx vitest *)",
-      "PowerShell(Get-ChildItem -Path \"E:\\\\20_UNI\\\\Html proyects\\\\Claude_Gear_Lab\\\\src\\\\tests\\\\\" -File | Select-Object FullName | ForEach-Object { $_.FullName })"
+      "PowerShell(Get-ChildItem -Path \"E:\\\\20_UNI\\\\Html proyects\\\\Claude_Gear_Lab\\\\src\\\\tests\\\\\" -File | Select-Object FullName | ForEach-Object { $_.FullName })",
+      "Bash(curl -s http://localhost:5180)",
+      "Bash(npx playwright *)",
+      "Bash('.right-panel')",
+      "Bash('.view-toggle')",
+      "Bash('select.text-input')",
+      "Bash(node verify_run.mjs)",
+      "Bash(npm install *)",
+      "Bash(node verify3d.mjs)"
     ]
   }
 }
