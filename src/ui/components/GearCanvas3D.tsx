@@ -115,7 +115,7 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa }: Props) {
     const lines2 = makeLines(e2);
 
     // Swap children
-    [pivot1, pivot2].forEach(p => { while (p.children.length) p.remove(p.children[0]); });
+    [pivot1, pivot2].forEach(p => { while (p.children.length) p.remove(p.children[0]!); });
     pivot1.add(fill1, lines1);
     pivot2.add(fill2, lines2);
 
@@ -171,8 +171,8 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa }: Props) {
       // Grid — always visible in both styles (depth cue)
       const grid = new THREE.GridHelper(40, 30, GRID, GRID);
       grid.position.y = -3;
-      (grid.material as THREE.Material).transparent = true;
-      (grid.material as THREE.Material).opacity = 0.65;
+      (grid.material as T3.Material).transparent = true;
+      (grid.material as T3.Material).opacity = 0.65;
       gridRef.current = grid;
       scene.add(grid);
 

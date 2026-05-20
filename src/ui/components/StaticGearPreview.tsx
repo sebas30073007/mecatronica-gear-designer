@@ -35,7 +35,7 @@ function Badge({ label }: { label: string }) {
   return (
     <text x={W / 2} y={H - 22} textAnchor="middle"
       fontFamily="var(--font-mono)" fontSize={11} fontWeight={600}
-      letterSpacing="0.1em" textTransform="uppercase" fill="var(--text-muted)">
+      letterSpacing="0.1em" fill="var(--text-muted)">
       {label.toUpperCase()}
     </text>
   );

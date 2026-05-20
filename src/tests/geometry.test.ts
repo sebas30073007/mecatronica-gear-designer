@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { involutePoint, involuteParamForRadius, involuteFunc, involuteFlankPoints } from '../geometry/involute';
+import { involutePoint, involuteParamForRadius, involuteFlankPoints } from '../geometry/involute';
 import { generateSpurGearOutline } from '../geometry/spurGear2D';
 import { rotatePoint, mirrorY, polarToCartesian, toLocalSvgPath } from '../geometry/polar';
 import { calculateExternalGearInitialPhase, normalizeAngle } from '../geometry/meshing';
@@ -72,8 +72,6 @@ describe('generateSpurGearOutline — 20T module 2 PA 20° (reference case)', ()
 
   it('tooth spacing is 2π/z, not π/z (critical spacing check)', () => {
     // Verify the outline wraps exactly once (first ≈ last after one full revolution)
-    const first = geo.outline[0]!;
-    const last  = geo.outline[geo.outline.length - 1]!;
     // They won't be identical (outline is open before Z close), but the angular
     // span of the outline should cover exactly 2π — check via outline length
     // being a multiple of (2 * quality + radials + arc) per tooth
