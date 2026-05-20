@@ -1,0 +1,817 @@
+Sí, aquí la clave es que el usuario **no debería sentir que está escogiendo entre “2D o 3D” desde cero**, sino que está construyendo un **sistema de engranes** y luego decide **cómo lo quiere fabricar/exportar**.
+
+Yo lo resolvería con este flujo:
+
+## 1. Cambia el concepto de “2D / 3D” a “Diseño” + “Fabricación”
+
+Tu toggle actual **2D / 3D** está bien visualmente, pero puede confundirse si cambia demasiadas cosas. Yo lo usaría así:
+
+**2D**
+: Vista de bosquejo, relaciones, diámetros, centros, contornos y DXF/SVG.
+
+**3D**
+: Vista de volumen, espesor, eje, barreno, extrusión, hélice, bevel, worm, STL/STEP.
+
+Pero en la experiencia principal, el usuario debería pasar por:
+
+```txt
+Tipo de tren → Parámetros básicos → Vista 2D → Convertir a 3D → Exportar
+```
+
+No haría que el usuario empiece directo en “3D”, porque primero necesita entender el arreglo.
+
+---
+
+# Flujo ideal de usuario
+
+## Paso 1: Elegir tipo de mecanismo
+
+En el panel izquierdo, arriba, pondría un selector tipo:
+
+```txt
+TYPE
+[ Simple Gear Train ▼ ]
+```
+
+Con categorías:
+
+```txt
+2D / Planar
+- Simple Gear Train
+- Compound Gear Train
+- Internal Gear
+- Rack & Pinion
+- Planetary Gear Set
+
+3D / Spatial
+- Helical Gear Pair
+- Double Helical / Herringbone
+- Bevel Gear Pair
+- Worm Gear
+```
+
+Mi recomendación: **no mostrar todos como iguales desde el inicio**. Agrúpalos por dificultad.
+
+Podrías poner etiquetas:
+
+```txt
+Ready
+Coming soon
+Experimental
+```
+
+Ejemplo:
+
+```txt
+Simple Gear Train      Ready
+Internal Gear          Ready soon
+Rack & Pinion          Ready soon
+Helical Gear           3D Beta
+Bevel Gear             Later
+Worm Gear              Later
+```
+
+Así la app se siente ambiciosa, pero no rota.
+
+---
+
+## Paso 2: Parámetros principales simples
+
+Como tu público son estudiantes o ingenieros que no quieren meterse demasiado, los parámetros principales deberían ser:
+
+```txt
+Ratio objetivo
+Input teeth
+Output teeth
+Module
+Pressure angle
+Units
+```
+
+Y luego un botón o sección avanzada:
+
+```txt
+Advanced Geometry
+```
+
+Dentro de avanzado puedes esconder:
+
+```txt
+Backlash
+Bore diameter
+Hub diameter
+Keyway
+Clearance
+Root fillet
+Tooth resolution
+```
+
+Esto es importante: **no escondas módulo ni ratio**, pero sí esconde cosas de manufactura más específicas.
+
+---
+
+# 2D Mode: “Sketch / Laser Cut”
+
+Cuando el usuario está en 2D, la interfaz debe sentirse como diseño para corte o plano.
+
+## Opciones visibles en 2D
+
+```txt
+Manufacturing Mode
+[ Laser / CNC 2D ]
+
+Export:
+[ SVG ] [ DXF ]
+
+Material thickness:
+[ 3 mm / 6 mm / custom ]
+
+Bore:
+[ No bore / Circular bore / Custom diameter ]
+
+Include:
+[ Gear outline ]
+[ Pitch circles ]
+[ Center marks ]
+[ Labels ]
+```
+
+Aquí “material thickness” no afecta el DXF 2D directamente, pero sí prepara el paso a 3D. Por ejemplo, si exporta DXF para láser puede etiquetar: `MDF 6 mm`.
+
+## Qué debe mostrar el canvas 2D
+
+* contorno del engrane
+* círculos pitch opcionales
+* centros
+* cotas opcionales
+* distancia entre centros
+* ratio
+* sentido de giro
+* escala
+
+Tu actual interfaz ya va muy bien para esto.
+
+---
+
+# 3D Mode: “Solid Gear”
+
+Cuando el usuario cambia a 3D, yo no borraría el trabajo hecho. Haría que aparezca una sección:
+
+```txt
+Convert sketch to 3D
+```
+
+Y se agreguen propiedades nuevas:
+
+```txt
+Thickness / Face width
+Bore diameter
+Hub
+Chamfer / bevel edge
+Shaft fit
+Export format
+```
+
+Para spur gears, el 3D inicial es simple:
+
+```txt
+Contorno 2D + extrusión = STL / STEP
+```
+
+Ese debe ser tu primer gran hito 3D.
+
+## Opciones visibles en 3D para spur gear
+
+```txt
+3D Geometry
+Face width: 10 mm
+Bore diameter: 5 mm
+Hub: Off / On
+Hub diameter: 14 mm
+Hub height: 4 mm
+Edge chamfer: 0.5 mm
+
+Export:
+[ STL ] [ STEP ]
+```
+
+Y muy importante: si el usuario está viendo un tren completo, debe poder elegir:
+
+```txt
+Export:
+○ Selected gear only
+○ All gears as separate files
+○ Assembly preview
+```
+
+Porque normalmente no quieres exportar todo como una sola pieza fusionada.
+
+---
+
+# Cómo manejar los tipos de engranes
+
+Yo lo dividiría por “familias”, no por una lista infinita.
+
+## Familia 1: Planar 2D
+
+Estos viven bien en el modo actual:
+
+```txt
+Spur Gear
+Internal Gear
+Rack & Pinion
+Planetary Gear Set
+```
+
+Exportaciones ideales:
+
+```txt
+SVG
+DXF
+STL por extrusión simple
+STEP por extrusión simple
+```
+
+## Familia 2: Extruded 3D
+
+Son engranes que nacen de un perfil 2D y se extruyen:
+
+```txt
+Spur Gear 3D
+Internal Gear 3D
+Rack 3D
+Double Spur / Compound Gear
+```
+
+Aquí la lógica es sencilla:
+
+```txt
+perfil 2D → extrusión → barreno → hub → export
+```
+
+Este debería ser tu **primer 3D real**.
+
+## Familia 3: Twisted 3D
+
+Aquí entran:
+
+```txt
+Helical Gear
+Double Helical / Herringbone
+```
+
+Parámetros nuevos:
+
+```txt
+Helix angle
+Handedness: Left / Right
+Face width
+```
+
+Para double helical:
+
+```txt
+Left helix + right helix
+con unión al centro
+```
+
+Estos ya requieren geometría más seria, pero siguen siendo relativamente posibles si partes de un perfil 2D y lo vas rotando durante la extrusión.
+
+## Familia 4: Angular / Spatial
+
+Estos son más complejos:
+
+```txt
+Straight Bevel Gear
+Spiral Bevel Gear
+Miter Gear
+Worm Gear
+```
+
+Aquí yo no los metería todavía como generadores completos. Los pondría como:
+
+```txt
+Coming later / Experimental
+```
+
+Porque bevel y worm ya no son simplemente “extruir un contorno”. Cambia la geometría del diente en 3D.
+
+---
+
+# Mi recomendación de interfaz
+
+## Panel izquierdo: diseño del sistema
+
+Este panel controla la relación y el tipo de tren.
+
+```txt
+TYPE
+Simple Gear Train
+
+RATIO TARGET
+3.00 : 1
+
+TEETH
+Output 54
+Input 18
+
+MODULE
+2.00 mm
+
+PRESSURE ANGLE
+14.5° 20° 25°
+
+UNITS
+mm / in
+```
+
+Esto ya lo tienes muy bien.
+
+---
+
+## Panel derecho: fabricación/exportación
+
+Aparece cuando el usuario abre export o cambia a 3D.
+
+```txt
+FABRICATION
+
+Mode
+[ 2D Laser Cut ] [ 3D Print / CAD ]
+
+For 2D:
+File format: SVG / DXF
+Include: outline, centers, labels, pitch circles
+
+For 3D:
+Face width: 10 mm
+Bore: 5 mm
+Hub: off/on
+Format: STL / STEP
+```
+
+Así no saturas el panel izquierdo.
+
+---
+
+# Cómo debería funcionar el toggle 2D / 3D
+
+Tu toggle de arriba a la derecha debería cambiar la **vista**, no necesariamente el proyecto.
+
+## En 2D
+
+Muestra:
+
+```txt
+perfil
+cotas
+círculos pitch
+centros
+animación plana
+```
+
+## En 3D
+
+Muestra:
+
+```txt
+modelo extruido
+espesor
+barreno
+hub
+vista isométrica
+```
+
+Pero los parámetros base siguen siendo los mismos:
+
+```txt
+teeth
+module
+ratio
+pressure angle
+center distance
+```
+
+Eso hace que la app se sienta consistente.
+
+---
+
+# Flujo concreto que yo implementaría
+
+## Flujo A: corte láser
+
+```txt
+1. Usuario elige Simple Gear Train
+2. Define ratio 3:1
+3. Ajusta módulo y dientes
+4. Activa cotas si quiere verificar tamaño
+5. Exporta DXF/SVG
+```
+
+Opciones de exportación:
+
+```txt
+[✓] Gear outline
+[✓] Center marks
+[ ] Pitch circles
+[ ] Dimension labels
+```
+
+---
+
+## Flujo B: engrane 3D simple
+
+```txt
+1. Usuario diseña engrane en 2D
+2. Cambia a 3D
+3. La app pregunta: Face width?
+4. Usuario pone 10 mm
+5. Define bore diameter
+6. Exporta STL o STEP
+```
+
+Esto es lo más valioso para ti ahora.
+
+---
+
+## Flujo C: engrane helicoidal
+
+```txt
+1. Usuario elige Helical Gear Pair
+2. Define ratio
+3. Define módulo
+4. Define face width
+5. Define helix angle
+6. Define handedness
+7. Exporta STL/STEP
+```
+
+Este sería una segunda etapa 3D.
+
+---
+
+# Orden de desarrollo recomendado
+
+## Etapa 1 — Consolidar 2D profesional
+
+Ya casi estás aquí.
+
+Termina:
+
+```txt
+Spur gears externos
+DXF
+SVG
+cotas opcionales
+centros
+barreno básico
+escala
+animación correcta
+```
+
+También agregaría:
+
+```txt
+Export selected gear
+Export all gears
+```
+
+---
+
+## Etapa 2 — 2D manufacturable
+
+Agrega opciones de fabricación:
+
+```txt
+bore diameter
+center mark
+kerf compensation
+material thickness note
+labels opcionales
+```
+
+El **kerf compensation** sería muy útil para corte láser:
+
+```txt
+Kerf offset: 0.10 mm / 0.15 mm / custom
+```
+
+Eso te diferencia muchísimo de un simple generador visual.
+
+---
+
+## Etapa 3 — 3D por extrusión
+
+Primero solo spur gears.
+
+```txt
+perfil 2D → extrusión
+barreno circular
+hub opcional
+STL export
+```
+
+Aquí el usuario ya no necesita irse a Fusion o SolidWorks solo para extruir.
+
+---
+
+## Etapa 4 — STEP
+
+STEP es más difícil que STL porque no es solo malla; es CAD paramétrico/BREP. Para empezar, yo haría:
+
+```txt
+STL primero
+STEP después
+```
+
+Una estrategia práctica sería generar un script intermedio para FreeCAD/OpenCascade o usar una librería CAD en backend.
+
+Opciones técnicas:
+
+```txt
+STL: viable en frontend con Three.js / manifold / extrusion geometry
+STEP: mejor con backend usando OpenCascade, FreeCAD o CadQuery
+```
+
+---
+
+## Etapa 5 — Internal gear y rack
+
+Estos todavía caben muy bien en 2D y 3D extruido:
+
+```txt
+Internal gear
+Rack and pinion
+Planetary gear set
+```
+
+Para planetarios, la interfaz debe ser:
+
+```txt
+Sun teeth
+Planet teeth
+Ring teeth
+Number of planets
+Fixed: Sun / Ring / Carrier
+Input: Sun / Ring / Carrier
+Output: Sun / Ring / Carrier
+```
+
+Pero podrías simplificarlo con presets:
+
+```txt
+High reduction
+Compact reducer
+Speed increaser
+```
+
+---
+
+## Etapa 6 — Helical gears
+
+Agrega:
+
+```txt
+Face width
+Helix angle
+Handedness
+```
+
+Interfaz:
+
+```txt
+GEAR TYPE
+Helical Gear Pair
+
+Ratio
+Module
+Teeth
+Face width
+Helix angle
+Handedness
+```
+
+Visualmente ya sí necesitas 3D.
+
+---
+
+## Etapa 7 — Bevel, miter, worm
+
+Yo los dejaría para después.
+
+Orden sugerido:
+
+```txt
+Miter gear
+Straight bevel gear
+Worm gear
+Spiral bevel gear
+```
+
+Spiral bevel es probablemente de los más complejos.
+
+---
+
+# Qué mostrar y qué ocultar
+
+## Siempre visible
+
+```txt
+Type
+Ratio
+Teeth
+Module
+Center distance
+Pressure angle
+Units
+```
+
+## Visible solo en 2D export
+
+```txt
+DXF/SVG
+Center marks
+Pitch circles
+Labels
+Kerf compensation
+```
+
+## Visible solo en 3D
+
+```txt
+Face width
+Bore diameter
+Hub
+Chamfer
+STL/STEP
+Helix angle
+Handedness
+```
+
+## Avanzado
+
+```txt
+Backlash
+Root fillet
+Clearance
+Tooth resolution
+Profile shift
+```
+
+---
+
+# Una idea muy buena: “Design Intent”
+
+Esto haría tu app más fácil para estudiantes.
+
+En vez de que todo sean números, agrega una sección:
+
+```txt
+Design Intent
+[ Laser cut prototype ]
+[ 3D printed gear ]
+[ CAD part ]
+[ Educational animation ]
+```
+
+Y según eso cambias defaults.
+
+Por ejemplo:
+
+## Laser cut prototype
+
+```txt
+Export DXF
+Bore optional
+Kerf compensation visible
+Thickness as note
+No 3D settings
+```
+
+## 3D printed gear
+
+```txt
+STL
+Face width visible
+Bore visible
+Backlash recomendado
+Chamfer visible
+```
+
+## CAD part
+
+```txt
+STEP
+Precise bore
+Hub
+Keyway
+Tolerance fields
+```
+
+## Educational animation
+
+```txt
+Animation speed
+Pitch circles
+Ratio labels
+Direction arrows
+No manufacturing warnings
+```
+
+Esto haría que tu página se sienta más inteligente.
+
+---
+
+# Mi recomendación de producto final
+
+Yo la pensaría como:
+
+```txt
+Un generador paramétrico de mecanismos de engranes,
+con dos salidas principales:
+1. 2D manufacturable para corte láser/CNC
+2. 3D manufacturable para impresión/CAD
+```
+
+No como “un generador de todos los engranes del mundo”. Eso te puede explotar en complejidad.
+
+---
+
+# Roadmap realista
+
+## MVP actual mejorado
+
+```txt
+Spur gear train
+SVG/DXF export
+cotas
+animación
+ratio
+module
+center distance
+```
+
+## MVP 3D
+
+```txt
+Spur gear extruded
+face width
+bore
+STL export
+```
+
+## V1
+
+```txt
+Internal gear
+Rack and pinion
+kerf compensation
+export selected/all
+```
+
+## V2
+
+```txt
+STEP export
+hub
+keyway
+chamfer
+basic assembly export
+```
+
+## V3
+
+```txt
+Helical gear
+double helical
+planetary gearset
+```
+
+## V4
+
+```txt
+bevel
+miter
+worm
+spiral bevel
+```
+
+---
+
+# Decisión importante
+
+Yo no pondría “3D” como una app separada. Pondría:
+
+```txt
+2D Sketch
+↓
+Make Solid
+↓
+Export STL/STEP
+```
+
+Porque así tu app mantiene una lógica muy clara:
+
+> Primero resuelvo la transmisión. Luego resuelvo la fabricación.
+
+Eso es justo lo que un mecatrónico necesita.

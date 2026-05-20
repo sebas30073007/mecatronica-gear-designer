@@ -39,3 +39,28 @@ export function externalCenterDistance(d1Mm: number, d2Mm: number): number {
 export function internalCenterDistance(dRingMm: number, dExternalMm: number): number {
   return (dRingMm - dExternalMm) / 2;
 }
+
+/**
+ * Find the teeth counts whose center distance best matches targetCdMm while
+ * preserving the current ratio (teeth1 / teeth2 = output / input).
+ *
+ * Derivation:
+ *   CD = module × (teeth1 + teeth2) / 2
+ *   teeth1 = ratio × teeth2
+ *   → teeth2 = 2×CD / (module × (ratio + 1))
+ */
+export function teethForCenterDistance(
+  targetCdMm: number,
+  moduleMm: number,
+  ratio: number,
+  minTeeth = 8,
+  maxTeeth = 200,
+): { teeth1: number; teeth2: number } {
+  if (targetCdMm <= 0 || moduleMm <= 0 || ratio <= 0) {
+    return { teeth1: minTeeth, teeth2: minTeeth };
+  }
+  const clamp = (n: number) => Math.max(minTeeth, Math.min(maxTeeth, Math.round(n)));
+  const teeth2 = clamp((2 * targetCdMm) / (moduleMm * (ratio + 1)));
+  const teeth1 = clamp(ratio * teeth2);
+  return { teeth1, teeth2 };
+}

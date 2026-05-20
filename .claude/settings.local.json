@@ -7,7 +7,15 @@
       "Bash(where git *)",
       "Bash(pnpm *)",
       "PowerShell(Test-Path *)",
-      "PowerShell(New-Item *)"
+      "PowerShell(New-Item *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(npm test *)",
+      "Bash(node -e ' *)",
+      "Bash(node --input-type=module)",
+      "Bash(npx vitest *)",
+      "PowerShell(Get-ChildItem -Path \"E:\\\\20_UNI\\\\Html proyects\\\\Claude_Gear_Lab\\\\src\\\\tests\\\\\" -File | Select-Object FullName | ForEach-Object { $_.FullName })"
     ]
   }
 }

@@ -8,8 +8,8 @@ const g1: SpurGear = {
   teeth: 54,
   moduleMm: 2,
   pressureAngleDeg: 20,
-  x: 390,
-  y: 180,
+  x: 0,
+  y: 0,
   rotationDeg: 0,
   isOutput: true,
   boreDiameterMm: 8,
@@ -23,8 +23,8 @@ const g2: SpurGear = {
   teeth: 18,
   moduleMm: 2,
   pressureAngleDeg: 20,
-  x: 225,
-  y: 300,
+  x: 0,
+  y: 0,
   rotationDeg: 0,
   rpm: 1500,
   isInput: true,
@@ -48,6 +48,7 @@ interface GearStore extends GearDesignState {
   setModule: (moduleMm: number) => void;
   setInputRpm: (rpm: number) => void;
   setPressureAngle: (deg: number) => void;
+  setThickness: (mm: number) => void;
   setViewMode: (mode: ViewMode) => void;
   setUnitSystem: (system: GearDesignState['unitSystem']) => void;
   setActiveMode: (mode: GearDesignState['activeMode']) => void;
@@ -75,6 +76,11 @@ export const useGearStore = create<GearStore>()((set) => ({
   setPressureAngle: (pressureAngleDeg) =>
     set((s) => ({
       gears: s.gears.map((g) => ({ ...g, pressureAngleDeg })),
+    })),
+
+  setThickness: (thicknessMm) =>
+    set((s) => ({
+      gears: s.gears.map((g) => ({ ...g, thicknessMm })),
     })),
 
   setViewMode: (mode) =>

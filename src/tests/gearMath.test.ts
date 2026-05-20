@@ -10,6 +10,7 @@ import {
   dedendum,
   externalCenterDistance,
   internalCenterDistance,
+  teethForCenterDistance,
 } from '../core/gearMath';
 
 describe('pitchDiameter', () => {
@@ -84,5 +85,31 @@ describe('externalCenterDistance', () => {
 describe('internalCenterDistance', () => {
   it('ring 120mm, external 36mm → 42 mm', () => {
     expect(internalCenterDistance(120, 36)).toBe(42);
+  });
+});
+
+describe('teethForCenterDistance', () => {
+  it('recovers original teeth for exact CD (ratio 3, module 2, CD 72mm)', () => {
+    const { teeth1, teeth2 } = teethForCenterDistance(72, 2, 3);
+    expect(teeth1).toBe(54);
+    expect(teeth2).toBe(18);
+  });
+  it('produced CD is exact when teeth divide evenly', () => {
+    const { teeth1, teeth2 } = teethForCenterDistance(60, 2, 3);
+    expect(externalCenterDistance(pitchDiameter(2, teeth1), pitchDiameter(2, teeth2))).toBe(60);
+  });
+  it('ratio is approximately preserved', () => {
+    const { teeth1, teeth2 } = teethForCenterDistance(100, 2, 3);
+    expect(teeth1 / teeth2).toBeCloseTo(3, 0);
+  });
+  it('clamps teeth to minimum when CD is tiny', () => {
+    const { teeth1, teeth2 } = teethForCenterDistance(1, 2, 3);
+    expect(teeth1).toBeGreaterThanOrEqual(8);
+    expect(teeth2).toBeGreaterThanOrEqual(8);
+  });
+  it('returns minTeeth for invalid inputs', () => {
+    const r = teethForCenterDistance(0, 2, 3);
+    expect(r.teeth1).toBe(8);
+    expect(r.teeth2).toBe(8);
   });
 });
