@@ -20,8 +20,9 @@ export default function App() {
     gears, setTeeth, setModule, setPressureAngle,
     view, unitSystem, activeMode,
     setViewMode, setUnitSystem, setActiveMode,
-    fabricationMode, fab3d,
-    setFabricationMode, setFab3d,
+    fabricationMode, fab3d, setFabricationMode, setFab3d,
+    rackPinion, setRackPinion,
+    internalGear, setInternalGear,
   } = useGearStore();
 
   const g1 = gears[0] as SpurGear;
@@ -40,6 +41,27 @@ export default function App() {
   const is3d      = view.mode === '3d';
   const canToggle = !is3dOnly(activeMode);
 
+  // Technical summary shown in the topbar center
+  const designSummary = (() => {
+    const fmtM = (m: number) => `m${Number.isInteger(m) ? m : m.toFixed(2)}`;
+    switch (activeMode) {
+      case 'simple':
+        return `Spur Gear · z${g1.teeth}/z${g2.teeth} · i=${ratio.toFixed(2)} · ${fmtM(moduleMm)}`;
+      case 'rack-pinion':
+        return `Rack & Pinion · z${rackPinion.pinionTeeth} · L=${rackPinion.rackLengthMm}mm · ${fmtM(rackPinion.moduleMm)}`;
+      case 'internal': {
+        const iRatio = internalGear.ringTeeth / internalGear.pinionTeeth;
+        return `Internal Gear · Ring z${internalGear.ringTeeth} / Pin z${internalGear.pinionTeeth} · i=${iRatio.toFixed(2)} · ${fmtM(internalGear.moduleMm)}`;
+      }
+      case 'planetary':   return 'Planetary Gear Set';
+      case 'compound':    return 'Compound Gear Train';
+      case 'helical':     return 'Helical Gear';
+      case 'bevel':       return 'Bevel Gear';
+      case 'herringbone': return 'Herringbone Gear';
+      default:            return 'Gear Designer';
+    }
+  })();
+
   const handleSetActiveMode = (mode: ActiveMode) => {
     setActiveMode(mode);
     if (is3dOnly(mode)) setViewMode('3d' as ViewMode);
@@ -48,6 +70,7 @@ export default function App() {
   return (
     <div className={`app${showExport ? ' app-frozen' : ''}`}>
       <TopBar
+        summary={designSummary}
         debug={debug} showRuler={showRuler}
         onDebugToggle={() => setDebug(v => !v)}
         onRulerToggle={() => setShowRuler(v => !v)}
@@ -58,10 +81,12 @@ export default function App() {
         moduleMm={moduleMm} pa={pa} unitSystem={unitSystem} activeMode={activeMode}
         warnings={warnings}
         fabricationMode={fabricationMode} fab3d={fab3d}
+        rackPinion={rackPinion} internalGear={internalGear}
         onSetTeeth={setTeeth} onSetModule={setModule}
         onSetPressureAngle={setPressureAngle} onSetUnitSystem={setUnitSystem}
         onSetActiveMode={handleSetActiveMode}
         onSetFabricationMode={setFabricationMode} onSetFab3d={setFab3d}
+        onSetRackPinion={setRackPinion} onSetInternalGear={setInternalGear}
       />
       {canToggle && (
         <div className="view-toggle">
@@ -73,6 +98,7 @@ export default function App() {
         g1={g1} g2={g2} moduleMm={moduleMm} pa={pa} ratio={ratio}
         unitSystem={unitSystem} debug={debug} showRuler={showRuler}
         is3d={is3d} activeMode={activeMode}
+        rackPinion={rackPinion} internalGear={internalGear}
       />
       {showExport && (
         <ExportModal

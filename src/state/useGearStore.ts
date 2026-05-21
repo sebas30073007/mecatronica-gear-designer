@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type {
   GearDesignState, SpurGear, ViewMode,
   FabricationMode, FabricationState2D, FabricationState3D,
+  RackPinionParams, InternalGearParams,
 } from '../core/gearTypes';
 
 const g1: SpurGear = {
@@ -29,6 +30,17 @@ export const initialState: GearDesignState = {
   view: { zoom: 1, panX: 0, panY: 0, showGrid: true, mode: '2d' },
 };
 
+const defaultRackPinion: RackPinionParams = {
+  pinionTeeth: 18, moduleMm: 2, pressureAngleDeg: 20,
+  rackLengthMm: 120, thicknessMm: 10,
+};
+
+const defaultInternalGear: InternalGearParams = {
+  ringTeeth: 48, pinionTeeth: 16, moduleMm: 2,
+  pressureAngleDeg: 20,
+  wallThicknessMm: 3, thicknessMm: 10,
+};
+
 const defaultFab2d: FabricationState2D = {
   showOutline: true,
   showCenters: true,
@@ -47,7 +59,6 @@ const defaultFab3d: FabricationState3D = {
 };
 
 interface GearStore extends GearDesignState {
-  // Design actions
   setTeeth: (id: string, teeth: number) => void;
   setModule: (moduleMm: number) => void;
   setInputRpm: (rpm: number) => void;
@@ -57,7 +68,13 @@ interface GearStore extends GearDesignState {
   setUnitSystem: (system: GearDesignState['unitSystem']) => void;
   setActiveMode: (mode: GearDesignState['activeMode']) => void;
   loadState: (state: GearDesignState) => void;
-  // Fabrication state (not in GearDesignState — not serialized to URL)
+  // Rack & Pinion state
+  rackPinion: RackPinionParams;
+  setRackPinion: (u: Partial<RackPinionParams>) => void;
+  // Internal Gear state
+  internalGear: InternalGearParams;
+  setInternalGear: (u: Partial<InternalGearParams>) => void;
+  // Fabrication state
   fabricationMode: FabricationMode;
   fab2d: FabricationState2D;
   fab3d: FabricationState3D;
@@ -68,6 +85,8 @@ interface GearStore extends GearDesignState {
 
 export const useGearStore = create<GearStore>()((set) => ({
   ...initialState,
+  rackPinion: defaultRackPinion,
+  internalGear: defaultInternalGear,
   fabricationMode: '2d-laser',
   fab2d: defaultFab2d,
   fab3d: defaultFab3d,
@@ -88,6 +107,8 @@ export const useGearStore = create<GearStore>()((set) => ({
   setActiveMode: (activeMode) => set({ activeMode }),
   loadState: (state) => set(state),
 
+  setRackPinion: (u) => set((s) => ({ rackPinion: { ...s.rackPinion, ...u } })),
+  setInternalGear: (u) => set((s) => ({ internalGear: { ...s.internalGear, ...u } })),
   setFabricationMode: (fabricationMode) => set({ fabricationMode }),
   setFab2d: (updates) => set((s) => ({ fab2d: { ...s.fab2d, ...updates } })),
   setFab3d: (updates) => set((s) => ({ fab3d: { ...s.fab3d, ...updates } })),

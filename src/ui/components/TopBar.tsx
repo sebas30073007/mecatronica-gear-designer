@@ -1,6 +1,5 @@
-export type ExportType = 'output' | 'input' | 'pair' | 'output-dxf' | 'input-dxf' | 'pair-dxf';
-
 interface Props {
+  summary: string;
   debug: boolean;
   showRuler: boolean;
   onDebugToggle: () => void;
@@ -8,16 +7,25 @@ interface Props {
   onExportClick: () => void;
 }
 
-export default function TopBar({ debug, showRuler, onDebugToggle, onRulerToggle, onExportClick }: Props) {
+export default function TopBar({ summary, debug, showRuler, onDebugToggle, onRulerToggle, onExportClick }: Props) {
   return (
     <header className="topbar">
-      <div className="logo">MECATR<span className="gear-o" aria-hidden="true" />NICA</div>
-      <div className="topbar-center">
-        <div className="topbar-crumb">
-          <span>Projects</span><span className="sep">/</span><span className="current">Reductora-01</span>
-        </div>
-        <div className="topbar-title">Gear Designer</div>
+
+      {/* ── Left: logo ───────────────────────────────── */}
+      <div className="logo">
+        MECATR<span className="gear-o" aria-hidden="true" />NICA
       </div>
+
+      <div className="topbar-divider" />
+
+      {/* ── Center: project name + technical summary ─── */}
+      <div className="topbar-center">
+        <span className="topbar-project">Reductora-01</span>
+        <span className="topbar-sep">/</span>
+        <span className="topbar-summary">{summary}</span>
+      </div>
+
+      {/* ── Right: quick tools + export ──────────────── */}
       <div className="topbar-actions">
         <button className="icon-action" title="Debug overlay"
           style={{ color: debug ? 'var(--red)' : undefined }}
@@ -46,6 +54,7 @@ export default function TopBar({ debug, showRuler, onDebugToggle, onRulerToggle,
           Export
         </button>
       </div>
+
     </header>
   );
 }

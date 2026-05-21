@@ -24,7 +24,8 @@
       "Bash(node verify_run.mjs)",
       "Bash(npm install *)",
       "Bash(node verify3d.mjs)",
-      "Bash(node v_quick.mjs)"
+      "Bash(node v_quick.mjs)",
+      "Bash(node vchk.mjs)"
     ]
   }
 }

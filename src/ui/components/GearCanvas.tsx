@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useRef } from 'react';
-import type { SpurGear, UnitSystem, ActiveMode } from '../../core/gearTypes';
+import type { SpurGear, UnitSystem, ActiveMode, RackPinionParams, InternalGearParams } from '../../core/gearTypes';
 import { layoutTwoGears } from '../../geometry/simplePreviewGear';
 import { generateSpurGearOutline } from '../../geometry/spurGear2D';
 import { toLocalSvgPath } from '../../geometry/polar';
@@ -9,6 +9,10 @@ import DimensionOverlay from '../svg/DimensionOverlay';
 import ScaleBar from '../svg/ScaleBar';
 import StaticGearPreview from './StaticGearPreview';
 import GearCanvas3D from './GearCanvas3D';
+import RackPinionCanvas2D from './RackPinionCanvas2D';
+import InternalGearCanvas2D from './InternalGearCanvas2D';
+import RackPinionCanvas3D from './RackPinionCanvas3D';
+import InternalGearCanvas3D from './InternalGearCanvas3D';
 
 const SVG_W = 620, SVG_H = 420;
 const R2D   = 180 / Math.PI;
@@ -45,7 +49,7 @@ function AnimatedSimpleGear({ g1, g2, moduleMm, pa, unitSystem, debug, showRuler
   live.current = { driverInit: driverInitialRotationRad, drivenInit: drivenInitialRotationRad, z1: g1.teeth, z2: g2.teeth };
 
   useEffect(() => {
-    let rafId: number, t0 = 0;
+    let rafId = 0, t0 = 0;
     const frame = (now: DOMHighResTimeStamp) => {
       if (!t0) t0 = now;
       const delta = ((now - t0) / 1000) * OMEGA;
@@ -58,10 +62,7 @@ function AnimatedSimpleGear({ g1, g2, moduleMm, pa, unitSystem, debug, showRuler
     return () => cancelAnimationFrame(rafId);
   }, []);
 
-  const px       = (mm: number) => mm * svgScale;
-  const axisLen  = Math.hypot(cx2 - cx1, cy2 - cy1);
-  const contactX = cx1 + (cx2 - cx1) / axisLen * px(geo1.pitchRadius);
-  const contactY = cy1 + (cy2 - cy1) / axisLen * px(geo1.pitchRadius);
+  const px = (mm: number) => mm * svgScale;
 
   return (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`}>
@@ -76,8 +77,6 @@ function AnimatedSimpleGear({ g1, g2, moduleMm, pa, unitSystem, debug, showRuler
               <circle cx={cx} cy={cy} r={px(geo.baseRadius)}  fill="none" stroke="#60a5fa" strokeWidth={0.75} strokeDasharray="3 3" />
             </g>
           ))}
-          <circle cx={contactX} cy={contactY} r={4}   fill="none"    stroke="#f97316" strokeWidth={1.5} />
-          <circle cx={contactX} cy={contactY} r={1.5} fill="#f97316" />
         </g>
       )}
       <g transform={`translate(${cx1},${cy1})`}>
@@ -106,18 +105,20 @@ interface Props {
   g1: SpurGear; g2: SpurGear; moduleMm: number; pa: number; ratio: number;
   unitSystem: UnitSystem; debug: boolean; showRuler: boolean; is3d: boolean;
   activeMode: ActiveMode;
+  rackPinion: RackPinionParams;
+  internalGear: InternalGearParams;
 }
 
-export default function GearCanvas({ g1, g2, moduleMm, pa, ratio, unitSystem, debug, showRuler, is3d, activeMode }: Props) {
-  const isAnimated = activeMode === 'simple' && !is3d;
-  const is3DRender = activeMode === 'simple' &&  is3d;
+export default function GearCanvas({ g1, g2, moduleMm, pa, ratio, unitSystem, debug, showRuler, is3d, activeMode, rackPinion, internalGear }: Props) {
+  const LIVE_2D: ActiveMode[] = ['simple', 'rack-pinion', 'internal'];
+  const LIVE_3D: ActiveMode[] = ['simple', 'rack-pinion', 'internal'];
+
+  const isAnimated = !is3d && LIVE_2D.includes(activeMode);
+  const is3DRender = is3d  && LIVE_3D.includes(activeMode);
 
   return (
-    <section
-      className={`stage${is3DRender ? ' stage--three' : ''}`}
-      aria-label="Gear preview"
-    >
-      {isAnimated && (
+    <section className={`stage${is3DRender ? ' stage--three' : ''}`} aria-label="Gear preview">
+      {isAnimated && activeMode === 'simple' && (
         <>
           <div className="stage-annotation ann-tl">
             <span className="ann-dot" />
@@ -131,9 +132,31 @@ export default function GearCanvas({ g1, g2, moduleMm, pa, ratio, unitSystem, de
           </div>
         </>
       )}
-      {isAnimated   && <AnimatedSimpleGear g1={g1} g2={g2} moduleMm={moduleMm} pa={pa} unitSystem={unitSystem} debug={debug} showRuler={showRuler} />}
-      {is3DRender   && <GearCanvas3D g1={g1} g2={g2} moduleMm={moduleMm} pa={pa} />}
-      {!isAnimated && !is3DRender && <StaticGearPreview activeMode={activeMode} is3d={is3d} />}
+
+      {isAnimated && activeMode === 'simple' &&
+        <AnimatedSimpleGear g1={g1} g2={g2} moduleMm={moduleMm} pa={pa} unitSystem={unitSystem} debug={debug} showRuler={showRuler} />}
+
+      {isAnimated && activeMode === 'rack-pinion' &&
+        <RackPinionCanvas2D pinionTeeth={rackPinion.pinionTeeth} moduleMm={rackPinion.moduleMm}
+          pressureAngleDeg={rackPinion.pressureAngleDeg} rackLengthMm={rackPinion.rackLengthMm}
+          unitSystem={unitSystem} />}
+
+      {isAnimated && activeMode === 'internal' &&
+        <InternalGearCanvas2D ringTeeth={internalGear.ringTeeth} pinionTeeth={internalGear.pinionTeeth}
+          moduleMm={internalGear.moduleMm} wallThicknessMm={internalGear.wallThicknessMm}
+          pressureAngleDeg={internalGear.pressureAngleDeg} />}
+
+      {is3DRender && activeMode === 'simple' &&
+        <GearCanvas3D g1={g1} g2={g2} moduleMm={moduleMm} pa={pa} />}
+
+      {is3DRender && activeMode === 'rack-pinion' &&
+        <RackPinionCanvas3D {...rackPinion} />}
+
+      {is3DRender && activeMode === 'internal' &&
+        <InternalGearCanvas3D {...internalGear} />}
+
+      {!isAnimated && !is3DRender &&
+        <StaticGearPreview activeMode={activeMode} is3d={is3d} />}
     </section>
   );
 }

@@ -1,14 +1,19 @@
-interface Props { label: string; value: number; onChange: (v: number) => void; }
+interface Props {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+}
 
-const clamp = (n: number) => Math.max(8, Math.min(200, n));
-
-export default function TeethStepper({ label, value, onChange }: Props) {
+export default function TeethStepper({ label, value, onChange, min = 8, max = 200 }: Props) {
+  const clamp = (n: number) => Math.max(min, Math.min(max, n));
   return (
     <div>
       <div className="stepper">
         <button onClick={() => onChange(clamp(value - 1))}>−</button>
         <input
-          type="number" value={value} min={8} max={200}
+          type="number" value={value} min={min} max={max}
           onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) onChange(clamp(v)); }}
         />
         <button onClick={() => onChange(clamp(value + 1))}>+</button>

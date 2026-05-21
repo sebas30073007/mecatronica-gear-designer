@@ -112,6 +112,35 @@ export interface FabricationState3D {
   exportFormat: 'stl' | 'step';
 }
 
+// ── Rack & Pinion parameters ──────────────────────────────────────────────────
+
+export interface RackPinionParams {
+  pinionTeeth:      number;   // 8–30
+  moduleMm:         number;   // 1.0 1.25 1.5 2.0 2.5 3.0
+  pressureAngleDeg: number;   // 14.5 | 20 | 25
+  rackLengthMm:     number;   // min=1.5×OD, max=200
+  thicknessMm:      number;   // face width for 3D (5–20)
+}
+
+/** min rack length = 1.5 × outer diameter of pinion */
+export const rackMinLength = (p: RackPinionParams) =>
+  Math.ceil(1.5 * (p.pinionTeeth + 2) * p.moduleMm);
+
+// ── Internal Gear (Ring) parameters ──────────────────────────────────────────
+
+export interface InternalGearParams {
+  ringTeeth:        number;   // 24–80, must be ≥ pinionTeeth + 8
+  pinionTeeth:      number;   // 8–30
+  moduleMm:         number;
+  pressureAngleDeg: number;   // 14.5 | 20 | 25
+  wallThicknessMm:  number;   // 2–6 mm
+  thicknessMm:      number;   // face width for 3D (5–20)
+}
+
+/** ring - pinion must be ≥ 8 to avoid interference */
+export const internalGearValid = (p: InternalGearParams) =>
+  p.ringTeeth - p.pinionTeeth >= 8 && p.ringTeeth >= 24;
+
 export type GearTypeStatus = 'ready' | 'beta' | 'coming-soon' | 'later';
 
 export interface GearTypeEntry {
