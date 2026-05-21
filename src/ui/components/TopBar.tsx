@@ -1,3 +1,5 @@
+export type ExportType = 'output' | 'input' | 'pair' | 'output-dxf' | 'input-dxf' | 'pair-dxf';
+
 interface Props {
   summary: string;
   debug: boolean;
