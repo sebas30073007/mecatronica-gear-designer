@@ -141,6 +141,25 @@ export interface InternalGearParams {
 export const internalGearValid = (p: InternalGearParams) =>
   p.ringTeeth - p.pinionTeeth >= 8 && p.ringTeeth >= 24;
 
+// ── Planetary Gear parameters ─────────────────────────────────────────────────
+
+export interface PlanetaryParams {
+  sunTeeth:         number;   // 10–36
+  planetTeeth:      number;   // 6–20
+  planetCount:      number;   // 3 | 4 | 5
+  moduleMm:         number;
+  pressureAngleDeg: number;
+  thicknessMm:      number;   // face width
+}
+
+/** ringTeeth is always derived: N_ring = N_sun + 2 × N_planet */
+export const planetaryRingTeeth = (p: PlanetaryParams) =>
+  p.sunTeeth + 2 * p.planetTeeth;
+
+/** Equal-spacing condition: (N_sun + N_ring) must be divisible by planet count */
+export const planetarySpacingOk = (p: PlanetaryParams) =>
+  (p.sunTeeth + planetaryRingTeeth(p)) % p.planetCount === 0;
+
 export type GearTypeStatus = 'ready' | 'beta' | 'coming-soon' | 'later';
 
 export interface GearTypeEntry {

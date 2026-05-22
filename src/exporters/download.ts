@@ -11,3 +11,9 @@ export const downloadSvg = (content: string, filename: string) =>
 
 export const downloadDxf = (content: string, filename: string) =>
   downloadTextFile(content, filename, 'application/dxf');
+
+export const downloadStl = (content: string, filename: string) =>
+  downloadTextFile(content, filename, 'model/stl');
+
+export const downloadObj = (content: string, filename: string) =>
+  downloadTextFile(content, filename, 'model/obj');

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple Gear Train — Three.js Minimal</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --text: #6b6d6e;
+      --text-strong: #0a0c0f;
+      --border: #e4e4e7;
+      --red: #e60023;
+      --panel: rgba(255, 255, 255, 0.84);
+      --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--sans);
+      background: var(--bg);
+    }
+
+    .toolbar {
+      position: fixed;
+      top: 22px;
+      left: 22px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .segmented {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform .18s ease, background-color .18s ease, color .18s ease, border-color .18s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+
+    .segmented button.active {
+      background: var(--text-strong);
+      color: #ffffff;
+      border-color: var(--text-strong);
+    }
+
+    #viewport {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="segmented" aria-label="Modo de visualización">
+      <button id="toggle2d" class="active" type="button">2D</button>
+      <button id="toggle3d" type="button">3D</button>
+    </div>
+  </div>
+
+  <main id="viewport"></main>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from "three";
+
+    const viewport = document.getElementById("viewport");
+    const btn2d = document.getElementById("toggle2d");
+    const btn3d = document.getElementById("toggle3d");
+
+    const CONFIG = {
+      z1: 36,
+      z2: 12,
+      moduleMm: 2,
+      pressureAngleDeg: 20,
+      thicknessMm: 12,
+      layoutAngleDeg: 215,
+      spinSecondsPerRev: 18,
+      minThickness: 0.08,
+      transitionSpeed: 0.055,
+      gridFineStep: 6,
+      gridMajorStep: 30,
+      homeDamping: 0.84
+    };
+
+    const COLORS = {
+      black: new THREE.Color("#0a0c0f"),
+      white: new THREE.Color("#ffffff"),
+      bg: new THREE.Color("#fafbfc"),
+      gridFine: new THREE.Color("#eef0f3"),
+      gridMajor: new THREE.Color("#dfe3e8")
+    };
+
+    const state = {
+      targetMode: "2d",
+      progress: 0,
+      lastThicknessKey: "",
+      currentThickness: CONFIG.minThickness,
+      time0: performance.now(),
+      drag: false,
+      userRotX: 0,
+      userRotY: 0,
+      lastX: 0,
+      lastY: 0,
+      returnHome: false
+    };
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(COLORS.bg, 1);
+    viewport.prepend(renderer.domElement);
+
+    const scene = new THREE.Scene();
+
+    const gearRig = new THREE.Group();
+    scene.add(gearRig);
+
+    const gearGroup = new THREE.Group();
+    gearRig.add(gearGroup);
+
+    const gridGroup = new THREE.Group();
+    scene.add(gridGroup);
+
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 5000);
+
+    let gear1 = null;
+    let gear2 = null;
+    let layout = null;
+    let sceneBound = 100;
+
+    function degToRad(deg) { return deg * Math.PI / 180; }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function easeInOut(t) { return t * t * (3 - 2 * t); }
+
+    function polar(r, a) {
+      return { x: r * Math.cos(a), y: r * Math.sin(a) };
+    }
+
+    function rotatePoint(p, a) {
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      return { x: p.x * c - p.y * s, y: p.x * s + p.y * c };
+    }
+
+    function generateSpurGearOutline(teeth, moduleMm, pressureAngleDeg, samples = 8) {
+      const pa = degToRad(pressureAngleDeg);
+      const pitchR = moduleMm * teeth / 2;
+      const outerR = pitchR + moduleMm;
+      const rootR = Math.max(pitchR - 1.25 * moduleMm, moduleMm * 0.7);
+      const baseR = pitchR * Math.cos(pa);
+      const pitchAngle = Math.PI * 2 / teeth;
+
+      const outline = [];
+      const rootShoulder = 0.36;
+      const outerShoulder = 0.19;
+
+      function pushArc(radius, a1, a2, steps) {
+        for (let i = 1; i <= steps; i++) {
+          const a = a1 + (a2 - a1) * i / steps;
+          outline.push(polar(radius, a));
+        }
+      }
+
+      function pushFlank(r1, a1, r2, a2, steps) {
+        for (let i = 1; i <= steps; i++) {
+          const t = i / steps;
+          const r = lerp(r1, r2, t);
+          const a = lerp(a1, a2, t);
+          outline.push(polar(r, a));
+        }
+      }
+
+      for (let i = 0; i < teeth; i++) {
+        const c = i * pitchAngle;
+        const valleyL = c - pitchAngle * 0.5;
+        const rootL = c - pitchAngle * rootShoulder;
+        const outerL = c - pitchAngle * outerShoulder;
+        const outerRang = c + pitchAngle * outerShoulder;
+        const rootRang = c + pitchAngle * rootShoulder;
+        const valleyR = c + pitchAngle * 0.5;
+
+        if (i === 0) outline.push(polar(rootR, valleyL));
+        pushArc(rootR, valleyL, rootL, 2);
+        pushFlank(rootR, rootL, outerR, outerL, 3);
+        pushArc(outerR, outerL, outerRang, Math.max(3, Math.floor(samples / 2)));
+        pushFlank(outerR, outerRang, rootR, rootRang, 3);
+        pushArc(rootR, rootRang, valleyR, 2);
+      }
+
+      return { outline, pitchRadius: pitchR, outerRadius: outerR, rootRadius: rootR, baseRadius: baseR };
+    }
+
+    function layoutTwoGears(g1, g2) {
+      const cd = g1.pitchRadius + g2.pitchRadius;
+      const a = degToRad(CONFIG.layoutAngleDeg);
+      const c1 = { x: 0, y: 0 };
+      const c2 = { x: cd * Math.cos(a), y: -cd * Math.sin(a) };
+
+      const minX = Math.min(c1.x - g1.outerRadius, c2.x - g2.outerRadius);
+      const maxX = Math.max(c1.x + g1.outerRadius, c2.x + g2.outerRadius);
+      const minY = Math.min(c1.y - g1.outerRadius, c2.y - g2.outerRadius);
+      const maxY = Math.max(c1.y + g1.outerRadius, c2.y + g2.outerRadius);
+
+      return {
+        cd,
+        c1,
+        c2,
+        center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
+        span: Math.max(maxX - minX, maxY - minY)
+      };
+    }
+
+    function outlineToShape(outline) {
+      const shape = new THREE.Shape();
+      outline.forEach((p, i) => {
+        if (i === 0) shape.moveTo(p.x, p.y);
+        else shape.lineTo(p.x, p.y);
+      });
+      shape.closePath();
+      return shape;
+    }
+
+    function makeGearObject(profile, teeth, thickness) {
+      const shape = outlineToShape(profile.outline);
+
+      const boreR = Math.max(profile.rootRadius * 0.28, CONFIG.moduleMm);
+      const hole = new THREE.Path();
+      const holeSegments = 64;
+      for (let i = 0; i <= holeSegments; i++) {
+        const a = Math.PI * 2 * i / holeSegments;
+        const x = Math.cos(a) * boreR;
+        const y = Math.sin(a) * boreR;
+        if (i === 0) hole.moveTo(x, y);
+        else hole.lineTo(x, y);
+      }
+      shape.holes.push(hole);
+
+      const geometry = new THREE.ExtrudeGeometry(shape, {
+        depth: thickness,
+        bevelEnabled: false,
+        curveSegments: 12
+      });
+      geometry.center();
+
+      const fillMaterial = new THREE.MeshBasicMaterial({
+        color: COLORS.white,
+        side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1
+      });
+
+      const edgeMaterial = new THREE.LineBasicMaterial({
+        color: COLORS.black
+      });
+
+      const mesh = new THREE.Mesh(geometry, fillMaterial);
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 12), edgeMaterial);
+
+      const group = new THREE.Group();
+      group.add(mesh, edges);
+      group.userData = { mesh, edges, fillMaterial, edgeMaterial, teeth };
+      return group;
+    }
+
+    function disposeObject3D(group) {
+      if (!group) return;
+      group.traverse(obj => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) obj.material.dispose();
+      });
+    }
+
+    function disposeGear(group) {
+      if (!group) return;
+      disposeObject3D(group);
+      gearGroup.remove(group);
+    }
+
+    function rebuildGears(thickness) {
+      disposeGear(gear1);
+      disposeGear(gear2);
+
+      const profile1 = generateSpurGearOutline(CONFIG.z1, CONFIG.moduleMm, CONFIG.pressureAngleDeg, 8);
+      const profile2 = generateSpurGearOutline(CONFIG.z2, CONFIG.moduleMm, CONFIG.pressureAngleDeg, 8);
+      layout = layoutTwoGears(profile1, profile2);
+
+      gear1 = makeGearObject(profile1, CONFIG.z1, thickness);
+      gear2 = makeGearObject(profile2, CONFIG.z2, thickness);
+
+      gear1.position.set(layout.c1.x - layout.center.x, layout.c1.y - layout.center.y, 0);
+      gear2.position.set(layout.c2.x - layout.center.x, layout.c2.y - layout.center.y, 0);
+
+      gearGroup.add(gear1, gear2);
+
+      sceneBound = layout.span * 0.75;
+      rebuildGrid();
+    }
+
+    function createGridSegments(size, step, color, opacity, skipEvery = null) {
+      const half = size / 2;
+      const positions = [];
+      const start = -Math.ceil(half / step) * step;
+      const end = Math.ceil(half / step) * step;
+
+      for (let v = start; v <= end + step * 0.5; v += step) {
+        const isMajorLine = skipEvery && Math.abs(v / skipEvery - Math.round(v / skipEvery)) < 1e-6;
+        if (isMajorLine) continue;
+
+        positions.push(-half, v, 0, half, v, 0);
+        positions.push(v, -half, 0, v, half, 0);
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+
+      const material = new THREE.LineBasicMaterial({
+        color,
+        transparent: true,
+        opacity,
+        depthWrite: false
+      });
+
+      return new THREE.LineSegments(geometry, material);
+    }
+
+    function rebuildGrid() {
+      disposeObject3D(gridGroup);
+      gridGroup.clear();
+
+      const size = Math.max(220, sceneBound * 3.2);
+      const fine = createGridSegments(size, CONFIG.gridFineStep, COLORS.gridFine, 0.42, CONFIG.gridMajorStep);
+      const major = createGridSegments(size, CONFIG.gridMajorStep, COLORS.gridMajor, 0.62);
+
+      gridGroup.add(fine, major);
+      updateGridPosition();
+    }
+
+    function updateGridPosition(progress = state.progress) {
+      const p = easeInOut(progress);
+    
+      // Rotación ligera hacia atrás.
+      // Negativo = la parte superior del grid se aleja.
+      const backTilt = lerp(0, -2, p);
+    
+      gridGroup.rotation.set(backTilt, 0, 0);
+    
+      gridGroup.position.set(
+        0,
+        lerp(0, -sceneBound * 0.18, p),
+        -state.currentThickness / 2 - lerp(0.65, 2.3, p)
+      );
+    }
+
+    function fitCamera(progress) {
+      const p = easeInOut(progress);
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.aspect = aspect;
+      camera.fov = lerp(18, 34, p);
+      camera.updateProjectionMatrix();
+
+      const frontDistance = sceneBound / Math.tan(degToRad(camera.fov) / 2) * 1.10;
+      const isoDistance = sceneBound / Math.tan(degToRad(camera.fov) / 2) * 1.44;
+
+      const front = new THREE.Vector3(0, 0, frontDistance);
+      const isoDir = new THREE.Vector3(0.00, 1.02, 0.82).normalize();
+      const iso = isoDir.multiplyScalar(isoDistance);
+
+      camera.position.lerpVectors(front, iso, p);
+      camera.lookAt(0, 0, 0);
+    }
+
+    function setMode(mode) {
+      state.targetMode = mode;
+      state.returnHome = true;
+
+      // Si estás completamente en 2D y entras a 3D, arrancas desde home.
+      if (mode === "3d" && state.progress < 0.08) {
+        state.userRotX = 0;
+        state.userRotY = 0;
+        state.returnHome = false;
+      }
+
+      btn2d.classList.toggle("active", mode === "2d");
+      btn3d.classList.toggle("active", mode === "3d");
+    }
+
+    btn2d.addEventListener("click", () => setMode("2d"));
+    btn3d.addEventListener("click", () => setMode("3d"));
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      if (state.targetMode !== "3d") return;
+      state.returnHome = false;
+      state.drag = true;
+      state.lastX = event.clientX;
+      state.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!state.drag) return;
+      state.userRotY += (event.clientX - state.lastX) * 0.008;
+      state.userRotX += (event.clientY - state.lastY) * 0.008;
+      state.userRotX = Math.max(-0.45, Math.min(0.45, state.userRotX));
+      state.lastX = event.clientX;
+      state.lastY = event.clientY;
+    });
+
+    function stopDrag() { state.drag = false; }
+    renderer.domElement.addEventListener("pointerup", stopDrag);
+    renderer.domElement.addEventListener("pointercancel", stopDrag);
+
+    function resize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      fitCamera(state.progress);
+    }
+    window.addEventListener("resize", resize);
+
+    function updateTransition() {
+      const target = state.targetMode === "3d" ? 1 : 0;
+      state.progress += (target - state.progress) * CONFIG.transitionSpeed;
+      if (Math.abs(target - state.progress) < 0.001) state.progress = target;
+
+      const p = easeInOut(state.progress);
+      const thickness = lerp(CONFIG.minThickness, CONFIG.thicknessMm, p);
+      const thicknessKey = thickness.toFixed(2);
+
+      state.currentThickness = thickness;
+
+      if (thicknessKey !== state.lastThicknessKey) {
+        state.lastThicknessKey = thicknessKey;
+        rebuildGears(thickness);
+      }
+
+      if (state.returnHome && !state.drag) {
+        state.userRotX *= CONFIG.homeDamping;
+        state.userRotY *= CONFIG.homeDamping;
+
+        if (Math.abs(state.userRotX) < 0.001) state.userRotX = 0;
+        if (Math.abs(state.userRotY) < 0.001) state.userRotY = 0;
+
+        if (state.userRotX === 0 && state.userRotY === 0) {
+          state.returnHome = false;
+        }
+      }
+
+      // Drag solo agrega ajuste fino en 3D; la transición base es la cámara.
+      gearRig.rotation.x = state.userRotX * p;
+      gearRig.rotation.y = state.userRotY * p;
+      gearGroup.scale.setScalar(1);
+
+      updateGridPosition(state.progress);
+      fitCamera(state.progress);
+    }
+
+    function updateSpin(now) {
+      const elapsed = (now - state.time0) / 1000;
+      const omega = (Math.PI * 2) / CONFIG.spinSecondsPerRev;
+      const spinDriver = -elapsed * omega;
+      const spinDriven = elapsed * omega * (CONFIG.z2 / CONFIG.z1);
+
+      if (gear1) gear1.rotation.z = spinDriven;
+      if (gear2) gear2.rotation.z = spinDriver;
+    }
+
+    function animate(now) {
+      updateTransition();
+      updateSpin(now);
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    rebuildGears(CONFIG.minThickness);
+    resize();
+    setMode("2d");
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

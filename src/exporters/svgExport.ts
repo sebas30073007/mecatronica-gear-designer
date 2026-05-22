@@ -20,7 +20,26 @@ export interface SvgExportOptions {
   quality?: number;
   showConstruction?: boolean;
   showPitchCircle?: boolean;
-  kerfOffsetMm?: number;  // applied in R3 — field accepted but not yet used
+  showLabels?: boolean;
+  kerfOffsetMm?: number;  // shrinks outline + expands bore by this amount
+}
+
+// Inward point offset for laser kerf compensation
+function applyKerfToOutline(points: import('../geometry/polar').Point2D[], kerf: number): import('../geometry/polar').Point2D[] {
+  if (!kerf) return points;
+  const N = points.length;
+  return points.map((p, i) => {
+    const prev = points[(i - 1 + N) % N]!;
+    const next = points[(i + 1) % N]!;
+    const e1x = p.x - prev.x, e1y = p.y - prev.y;
+    const e2x = next.x - p.x, e2y = next.y - p.y;
+    const l1 = Math.hypot(e1x, e1y) || 1, l2 = Math.hypot(e2x, e2y) || 1;
+    // Inward normal = rotate tangent CW (for CCW polygon)
+    const nx = (e1y / l1 + e2y / l2) / 2;
+    const ny = (-e1x / l1 - e2x / l2) / 2;
+    const nl = Math.hypot(nx, ny) || 1;
+    return { x: p.x + (nx / nl) * kerf, y: p.y + (ny / nl) * kerf };
+  });
 }
 
 const f = (n: number) => n.toFixed(3);
@@ -61,11 +80,16 @@ function centerMark(cx: number, cy: number, size = 2.5): string {
 // ─── Single gear ──────────────────────────────────────────────────────────────
 
 export function exportSingleGearSvg(params: GearExportParams, opts: SvgExportOptions = {}): string {
-  const { marginMm = 6, quality = 24, showConstruction = true, showPitchCircle = true } = opts;
+  const { marginMm = 6, quality = 24, showConstruction = true, showPitchCircle = true,
+          showLabels = false, kerfOffsetMm = 0 } = opts;
 
   const geo  = generateSpurGearOutline({ ...params, quality });
   const size = (geo.outerRadius + marginMm) * 2;
   const cx = size / 2, cy = size / 2;
+
+  // Apply kerf to outline points (inward) and expand bore
+  const outlinePoints = applyKerfToOutline(geo.outline, kerfOffsetMm);
+  const boreR = params.boreDiameterMm / 2 + kerfOffsetMm;
 
   const label = params.label ?? `Gear-${params.teeth}T-M${params.moduleMm}`;
   const date  = new Date().toISOString().split('T')[0]!;
@@ -77,21 +101,26 @@ export function exportSingleGearSvg(params: GearExportParams, opts: SvgExportOpt
 
   const pitch = showPitchCircle ? pitchGroup([{ cx, cy, r: geo.pitchRadius }]) : '';
 
+  const labelText = showLabels
+    ? `  <g id="layer-labels" font-family="monospace" fill="#666666">\n    <text x="${f(cx)}" y="${f(size - 1)}" text-anchor="middle" font-size="3.5">z=${params.teeth}  m=${params.moduleMm}  PA=${params.pressureAngleDeg}°  Ø${f(geo.pitchRadius * 2)}mm</text>\n  </g>`
+    : '';
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      width="${f(size)}mm" height="${f(size)}mm"
      viewBox="0 0 ${f(size)} ${f(size)}">
   <title>${label}</title>
-  <desc>Module: ${params.moduleMm} mm | Teeth: ${params.teeth} | PA: ${params.pressureAngleDeg}° | Pitch Ø: ${f(geo.pitchRadius * 2)} mm | Outer Ø: ${f(geo.outerRadius * 2)} mm | Root Ø: ${f(geo.rootRadius * 2)} mm | Generated: ${date}</desc>
+  <desc>Module: ${params.moduleMm} mm | Teeth: ${params.teeth} | PA: ${params.pressureAngleDeg}° | Pitch Ø: ${f(geo.pitchRadius * 2)} mm | Outer Ø: ${f(geo.outerRadius * 2)} mm | Root Ø: ${f(geo.rootRadius * 2)} mm${kerfOffsetMm ? ` | Kerf: ${kerfOffsetMm} mm` : ''} | Generated: ${date}</desc>
 ${construction}
 ${pitch}
   <g id="layer-cut" fill="none" stroke="#000000" stroke-width="0.1" stroke-linejoin="round" stroke-linecap="round">
-    <path id="gear-outline" d="${toAbsPath(geo.outline, cx, cy)}"/>
-    <path id="bore" d="${circlePath(cx, cy, params.boreDiameterMm / 2)}"/>
+    <path id="gear-outline" d="${toAbsPath(outlinePoints, cx, cy)}"/>
+    <path id="bore" d="${circlePath(cx, cy, boreR)}"/>
   </g>
   <g id="center-mark" stroke="#cc0000" stroke-width="0.15" opacity="0.5">
 ${centerMark(cx, cy)}
   </g>
+${labelText}
 </svg>`;
 }
 
@@ -102,7 +131,8 @@ export function exportGearPairSvg(
   gear2: GearExportParams,
   opts: SvgExportOptions & { layoutAngleDeg?: number } = {},
 ): string {
-  const { marginMm = 6, quality = 24, showConstruction = true, showPitchCircle = true, layoutAngleDeg = 215 } = opts;
+  const { marginMm = 6, quality = 24, showConstruction = true, showPitchCircle = true,
+          showLabels = false, kerfOffsetMm = 0, layoutAngleDeg = 215 } = opts;
 
   const geo1 = generateSpurGearOutline({ ...gear1, quality });
   const geo2 = generateSpurGearOutline({ ...gear2, quality });
@@ -141,23 +171,37 @@ export function exportGearPairSvg(
     axisLine,
   ) : '';
 
+  const out1 = applyKerfToOutline(geo1.outline, kerfOffsetMm);
+  const out2 = applyKerfToOutline(geo2.outline, kerfOffsetMm);
+  const bore1R = gear1.boreDiameterMm / 2 + kerfOffsetMm;
+  const bore2R = gear2.boreDiameterMm / 2 + kerfOffsetMm;
+
+  const pairLabel = showLabels
+    ? `  <g id="layer-labels" font-family="monospace" fill="#666666">` +
+      `\n    <text x="${f(cx1)}" y="${f(H - 1)}" text-anchor="middle" font-size="3">z=${gear1.teeth}</text>` +
+      `\n    <text x="${f(cx2)}" y="${f(H - 1)}" text-anchor="middle" font-size="3">z=${gear2.teeth}</text>` +
+      `\n    <text x="${f(W/2)}" y="${f(1.5)}" text-anchor="middle" font-size="3">m=${gear1.moduleMm}  i=${(gear1.teeth/gear2.teeth).toFixed(2)}  cd=${f(cd)}</text>` +
+      `\n  </g>`
+    : '';
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      width="${f(W)}mm" height="${f(H)}mm"
      viewBox="0 0 ${f(W)} ${f(H)}">
   <title>${label}</title>
-  <desc>Output: ${gear1.teeth}T | Input: ${gear2.teeth}T | Module: ${gear1.moduleMm} mm | PA: ${gear1.pressureAngleDeg}° | Center Distance: ${f(cd)} mm | Generated: ${date}</desc>
+  <desc>Output: ${gear1.teeth}T | Input: ${gear2.teeth}T | Module: ${gear1.moduleMm} mm | PA: ${gear1.pressureAngleDeg}° | Center Distance: ${f(cd)} mm${kerfOffsetMm ? ` | Kerf: ${kerfOffsetMm} mm` : ''} | Generated: ${date}</desc>
 ${construction}
 ${pitch}
   <g id="layer-cut" fill="none" stroke="#000000" stroke-width="0.1" stroke-linejoin="round" stroke-linecap="round">
-    <path id="gear1-outline" d="${toAbsPath(geo1.outline, cx1, cy1)}"/>
-    <path id="bore1" d="${circlePath(cx1, cy1, gear1.boreDiameterMm / 2)}"/>
-    <path id="gear2-outline" d="${toAbsPath(geo2.outline, cx2, cy2)}"/>
-    <path id="bore2" d="${circlePath(cx2, cy2, gear2.boreDiameterMm / 2)}"/>
+    <path id="gear1-outline" d="${toAbsPath(out1, cx1, cy1)}"/>
+    <path id="bore1" d="${circlePath(cx1, cy1, bore1R)}"/>
+    <path id="gear2-outline" d="${toAbsPath(out2, cx2, cy2)}"/>
+    <path id="bore2" d="${circlePath(cx2, cy2, bore2R)}"/>
   </g>
   <g id="center-marks" stroke="#cc0000" stroke-width="0.15" opacity="0.5">
 ${centerMark(cx1, cy1)}
 ${centerMark(cx2, cy2)}
   </g>
+${pairLabel}
 </svg>`;
 }

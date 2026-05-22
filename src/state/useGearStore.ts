@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type {
   GearDesignState, SpurGear, ViewMode,
   FabricationMode, FabricationState2D, FabricationState3D,
-  RackPinionParams, InternalGearParams,
+  RackPinionParams, InternalGearParams, PlanetaryParams,
 } from '../core/gearTypes';
 
 const g1: SpurGear = {
@@ -41,6 +41,11 @@ const defaultInternalGear: InternalGearParams = {
   wallThicknessMm: 3, thicknessMm: 10,
 };
 
+const defaultPlanetary: PlanetaryParams = {
+  sunTeeth: 18, planetTeeth: 9, planetCount: 3,
+  moduleMm: 2, pressureAngleDeg: 20, thicknessMm: 10,
+};
+
 const defaultFab2d: FabricationState2D = {
   showOutline: true,
   showCenters: true,
@@ -74,6 +79,9 @@ interface GearStore extends GearDesignState {
   // Internal Gear state
   internalGear: InternalGearParams;
   setInternalGear: (u: Partial<InternalGearParams>) => void;
+  // Planetary state
+  planetary: PlanetaryParams;
+  setPlanetary: (u: Partial<PlanetaryParams>) => void;
   // Fabrication state
   fabricationMode: FabricationMode;
   fab2d: FabricationState2D;
@@ -87,6 +95,7 @@ export const useGearStore = create<GearStore>()((set) => ({
   ...initialState,
   rackPinion: defaultRackPinion,
   internalGear: defaultInternalGear,
+  planetary: defaultPlanetary,
   fabricationMode: '2d-laser',
   fab2d: defaultFab2d,
   fab3d: defaultFab3d,
@@ -109,6 +118,7 @@ export const useGearStore = create<GearStore>()((set) => ({
 
   setRackPinion: (u) => set((s) => ({ rackPinion: { ...s.rackPinion, ...u } })),
   setInternalGear: (u) => set((s) => ({ internalGear: { ...s.internalGear, ...u } })),
+  setPlanetary: (u) => set((s) => ({ planetary: { ...s.planetary, ...u } })),
   setFabricationMode: (fabricationMode) => set({ fabricationMode }),
   setFab2d: (updates) => set((s) => ({ fab2d: { ...s.fab2d, ...updates } })),
   setFab3d: (updates) => set((s) => ({ fab3d: { ...s.fab3d, ...updates } })),
