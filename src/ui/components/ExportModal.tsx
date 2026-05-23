@@ -4,6 +4,7 @@ import { exportSingleGearSvg, exportGearPairSvg } from '../../exporters/svgExpor
 import { exportSingleGearDxf, exportGearPairDxf } from '../../exporters/dxfExport';
 import { exportGearStl, exportGearObj } from '../../exporters/meshExport';
 import { downloadSvg, downloadDxf, downloadStl, downloadObj } from '../../exporters/download';
+import { KerfDetailView } from './KerfDetailView';
 
 type Target = 'output' | 'input' | 'pair';
 type Format = 'svg' | 'dxf' | 'stl' | 'obj';
@@ -114,6 +115,11 @@ export default function ExportModal({ g1, g2, moduleMm, pa, is3d, onClose }: Pro
               ? <img src={previewUrl} alt="Gear preview" className="export-preview-img" />
               : <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Generating…</span>
             }
+            {!is3dFmt(format) && kerf > 0 && (
+              <div className="kerf-detail-overlay">
+                <KerfDetailView kerf={kerf} moduleMm={moduleMm} />
+              </div>
+            )}
           </div>
 
           {/* Right — settings */}
@@ -122,15 +128,11 @@ export default function ExportModal({ g1, g2, moduleMm, pa, is3d, onClose }: Pro
             {/* Format */}
             <div className="export-setting-group">
               <div className="export-setting-label">Format</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                <div className="segmented cols-2" style={{ fontSize: 12 }}>
-                  <button className={format === 'svg' ? 'active' : ''} onClick={() => setFormat('svg')}>SVG</button>
-                  <button className={format === 'dxf' ? 'active' : ''} onClick={() => setFormat('dxf')}>DXF R12</button>
-                </div>
-                <div className="segmented cols-2" style={{ fontSize: 12 }}>
-                  <button className={format === 'stl' ? 'active' : ''} onClick={() => setFormat('stl')}>STL</button>
-                  <button className={format === 'obj' ? 'active' : ''} onClick={() => setFormat('obj')}>OBJ</button>
-                </div>
+              <div className="segmented cols-4" style={{ fontSize: 12 }}>
+                <button className={format === 'svg' ? 'active' : ''} onClick={() => setFormat('svg')}>SVG</button>
+                <button className={format === 'dxf' ? 'active' : ''} onClick={() => setFormat('dxf')}>DXF R12</button>
+                <button className={format === 'stl' ? 'active' : ''} onClick={() => setFormat('stl')}>STL</button>
+                <button className={format === 'obj' ? 'active' : ''} onClick={() => setFormat('obj')}>OBJ</button>
               </div>
               <p className="fab-hint" style={{ marginTop: 4 }}>
                 {format === 'svg' ? 'Vector, 1:1 scale, layers' :
@@ -179,22 +181,6 @@ export default function ExportModal({ g1, g2, moduleMm, pa, is3d, onClose }: Pro
                 {kerf > 0 && <p className="fab-hint">−{kerf} mm outline  ·  +{kerf} mm bore</p>}
               </div>
             </>}
-
-            {/* 3D-specific options */}
-            {is3dFmt(format) && (
-              <div className="export-setting-group">
-                <div className="export-setting-label">Face Width</div>
-                <input
-                  className="text-input"
-                  type="number" min={2} max={100} step={1} value={thickness}
-                  onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0) setThickness(v); }}
-                />
-                <p className="fab-hint">
-                  {target === 'output' || target === 'pair' ? `Output: ${g1.teeth}T  Ø${g1.teeth * moduleMm}mm` : ''}
-                  {target === 'input' ? `Input: ${g2.teeth}T  Ø${g2.teeth * moduleMm}mm` : ''}
-                </p>
-              </div>
-            )}
 
             {/* Export button */}
             <button className="export-modal-btn" onClick={handleExport}>

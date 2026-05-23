@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type {
   GearDesignState, SpurGear, ViewMode,
   FabricationMode, FabricationState2D, FabricationState3D,
-  RackPinionParams, InternalGearParams, PlanetaryParams,
+  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams,
 } from '../core/gearTypes';
 
 const g1: SpurGear = {
@@ -46,6 +46,18 @@ const defaultPlanetary: PlanetaryParams = {
   moduleMm: 2, pressureAngleDeg: 20, thicknessMm: 10,
 };
 
+const defaultHelical: HelicalParams = {
+  outputTeeth: 36, inputTeeth: 18,
+  moduleMm: 2, pressureAngleDeg: 20,
+  helixAngleDeg: 20, thicknessMm: 15,
+};
+
+const defaultHerringbone: HelicalParams = {
+  outputTeeth: 36, inputTeeth: 18,
+  moduleMm: 2, pressureAngleDeg: 20,
+  helixAngleDeg: 20, thicknessMm: 20,
+};
+
 const defaultFab2d: FabricationState2D = {
   showOutline: true,
   showCenters: true,
@@ -82,6 +94,12 @@ interface GearStore extends GearDesignState {
   // Planetary state
   planetary: PlanetaryParams;
   setPlanetary: (u: Partial<PlanetaryParams>) => void;
+  // Helical state
+  helical: HelicalParams;
+  setHelical: (u: Partial<HelicalParams>) => void;
+  // Herringbone state
+  herringbone: HelicalParams;
+  setHerringbone: (u: Partial<HelicalParams>) => void;
   // Fabrication state
   fabricationMode: FabricationMode;
   fab2d: FabricationState2D;
@@ -96,6 +114,8 @@ export const useGearStore = create<GearStore>()((set) => ({
   rackPinion: defaultRackPinion,
   internalGear: defaultInternalGear,
   planetary: defaultPlanetary,
+  helical: defaultHelical,
+  herringbone: defaultHerringbone,
   fabricationMode: '2d-laser',
   fab2d: defaultFab2d,
   fab3d: defaultFab3d,
@@ -119,6 +139,8 @@ export const useGearStore = create<GearStore>()((set) => ({
   setRackPinion: (u) => set((s) => ({ rackPinion: { ...s.rackPinion, ...u } })),
   setInternalGear: (u) => set((s) => ({ internalGear: { ...s.internalGear, ...u } })),
   setPlanetary: (u) => set((s) => ({ planetary: { ...s.planetary, ...u } })),
+  setHelical: (u) => set((s) => ({ helical: { ...s.helical, ...u } })),
+  setHerringbone: (u) => set((s) => ({ herringbone: { ...s.herringbone, ...u } })),
   setFabricationMode: (fabricationMode) => set({ fabricationMode }),
   setFab2d: (updates) => set((s) => ({ fab2d: { ...s.fab2d, ...updates } })),
   setFab3d: (updates) => set((s) => ({ fab3d: { ...s.fab3d, ...updates } })),

@@ -1,12 +1,14 @@
-import type { SpurGear, UnitSystem, ActiveMode, RackPinionParams, InternalGearParams, PlanetaryParams } from '../../core/gearTypes';
+import type { SpurGear, UnitSystem, ActiveMode, RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams } from '../../core/gearTypes';
 import { fmtModule } from '../../core/units';
 import StaticGearPreview from './StaticGearPreview';
 import GearCanvas3D from './GearCanvas3D';
 import RackPinionCanvas3D from './RackPinionCanvas3D';
 import InternalGearCanvas3D from './InternalGearCanvas3D';
 import PlanetaryCanvas3D from './PlanetaryCanvas3D';
+import HelicalGearCanvas3D from './HelicalGearCanvas3D';
+import HerringboneGearCanvas3D from './HerringboneGearCanvas3D';
 
-const LIVE_MODES: ActiveMode[] = ['simple', 'rack-pinion', 'internal', 'planetary'];
+const LIVE_MODES: ActiveMode[] = ['simple', 'rack-pinion', 'internal', 'planetary', 'helical', 'herringbone'];
 
 interface Props {
   g1: SpurGear; g2: SpurGear; moduleMm: number; pa: number; ratio: number;
@@ -15,10 +17,12 @@ interface Props {
   rackPinion: RackPinionParams;
   internalGear: InternalGearParams;
   planetary: PlanetaryParams;
+  helical: HelicalParams;
+  herringbone: HelicalParams;
 }
 
 export default function GearCanvas({
-  g1, g2, moduleMm, pa, ratio, unitSystem, is3d, activeMode, rackPinion, internalGear, planetary,
+  g1, g2, moduleMm, pa, ratio, unitSystem, is3d, activeMode, rackPinion, internalGear, planetary, helical, herringbone,
 }: Props) {
   const isLive = LIVE_MODES.includes(activeMode);
   const viewMode = is3d ? '3d' : '2d';
@@ -54,6 +58,12 @@ export default function GearCanvas({
 
       {activeMode === 'planetary' &&
         <PlanetaryCanvas3D {...planetary} viewMode={viewMode} />}
+
+      {activeMode === 'helical' &&
+        <HelicalGearCanvas3D {...helical} />}
+
+      {activeMode === 'herringbone' &&
+        <HerringboneGearCanvas3D {...herringbone} />}
 
       {/* Placeholder for modes without a live canvas yet */}
       {!isLive && <StaticGearPreview activeMode={activeMode} is3d={is3d} />}

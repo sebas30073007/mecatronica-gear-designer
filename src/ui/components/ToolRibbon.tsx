@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type {
   SpurGear, ActiveMode, UnitSystem,
-  RackPinionParams, InternalGearParams, PlanetaryParams,
+  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams,
 } from '../../core/gearTypes';
 import { rackMinLength, internalGearValid, planetaryRingTeeth, planetarySpacingOk } from '../../core/gearTypes';
 import type { ValidationWarning } from '../../core/validation';
@@ -15,6 +15,7 @@ interface Props {
   g1: SpurGear; g2: SpurGear;
   moduleMm: number; pa: number; unitSystem: UnitSystem; activeMode: ActiveMode;
   warnings: ValidationWarning[];
+  is3d: boolean; faceWidthMm: number;
   rackPinion: RackPinionParams; internalGear: InternalGearParams;
   planetary: PlanetaryParams;
   onSetTeeth:        (id: string, teeth: number) => void;
@@ -25,15 +26,20 @@ interface Props {
   onSetRackPinion:   (u: Partial<RackPinionParams>) => void;
   onSetInternalGear: (u: Partial<InternalGearParams>) => void;
   onSetPlanetary:    (u: Partial<PlanetaryParams>) => void;
+  helical: HelicalParams;
+  onSetHelical:      (u: Partial<HelicalParams>) => void;
+  herringbone: HelicalParams;
+  onSetHerringbone:  (u: Partial<HelicalParams>) => void;
+  onSetFaceWidth:    (mm: number) => void;
   onExportClick:  () => void;
 }
 
 // ── Primitive ribbon building-blocks ─────────────────────────────────────────
 
-function Grp({ label, children }: { label: string; children: ReactNode }) {
+function Grp({ label, children, center }: { label: string; children: ReactNode; center?: boolean }) {
   return (
     <div className="rbn-group">
-      <div className="rbn-controls">{children}</div>
+      <div className={center ? 'rbn-controls rbn-controls--center' : 'rbn-controls'}>{children}</div>
       <div className="rbn-label">{label}</div>
     </div>
   );
@@ -54,12 +60,20 @@ function ModSel({ value, onChange }: { value: number; onChange: (v: number) => v
   );
 }
 
-function PASeg({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function PAStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const MIN = 20, MAX = 30;
+  const clamp = (v: number) => Math.min(MAX, Math.max(MIN, v));
   return (
-    <div className="segmented rbn-segmented cols-3">
-      {([14.5, 20, 25] as const).map(d => (
-        <button key={d} className={value === d ? 'active' : ''} onClick={() => onChange(d)}>{d}°</button>
-      ))}
+    <div className="rbn-pa-stepper">
+      <button onClick={() => onChange(clamp(value - 1))} disabled={value <= MIN}>−</button>
+      <div className="rbn-pa-value">
+        <input
+          type="number" min={MIN} max={MAX} step={1} value={value}
+          onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) onChange(clamp(v)); }}
+        />
+        <span>°</span>
+      </div>
+      <button onClick={() => onChange(clamp(value + 1))} disabled={value >= MAX}>+</button>
     </div>
   );
 }
@@ -76,20 +90,48 @@ function NumIn({ value, min, max, step = 1, onChange }: {
   );
 }
 
+const IMPERIAL_FRACS = [
+  { label: '1/8"',   mm: 3.175  }, { label: '3/16"', mm: 4.762  },
+  { label: '1/4"',   mm: 6.350  }, { label: '5/16"', mm: 7.938  },
+  { label: '3/8"',   mm: 9.525  }, { label: '1/2"',  mm: 12.700 },
+  { label: '5/8"',   mm: 15.875 }, { label: '3/4"',  mm: 19.050 },
+  { label: '7/8"',   mm: 22.225 }, { label: '1"',    mm: 25.400 },
+  { label: '1-1/4"', mm: 31.750 },
+];
+function nearestFrac(mm: number): string {
+  return IMPERIAL_FRACS.reduce((a, b) =>
+    Math.abs(a.mm - mm) <= Math.abs(b.mm - mm) ? a : b
+  ).label;
+}
+
+function FaceSlider({ value, unitSystem, onChange, min = 3 }: {
+  value: number; unitSystem: UnitSystem; onChange: (mm: number) => void; min?: number;
+}) {
+  const display = unitSystem === 'imperial' ? nearestFrac(value) : `${value} mm`;
+  return (
+    <div className="rbn-face-slider">
+      <input type="range" min={min} max={30} step={1} value={value}
+        onChange={e => onChange(parseInt(e.target.value, 10))} />
+      <span className="rbn-face-val">{display}</span>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ToolRibbon({
-  g1, g2, moduleMm, pa, unitSystem, activeMode, warnings,
-  rackPinion, internalGear, planetary,
+  g1, g2, moduleMm, pa, unitSystem, activeMode, warnings, is3d,
+  faceWidthMm, rackPinion, internalGear, planetary, helical, herringbone,
   onSetTeeth, onSetModule, onSetPressureAngle, onSetUnitSystem, onSetActiveMode,
-  onSetRackPinion, onSetInternalGear, onSetPlanetary,
+  onSetRackPinion, onSetInternalGear, onSetPlanetary, onSetHelical, onSetHerringbone, onSetFaceWidth,
   onExportClick,
 }: Props) {
+  const showFaceSlider = is3d;
   return (
     <div className="ribbon">
 
       {/* ── Type ─────────────────────────────────────── */}
-      <Grp label="Type">
+      <Grp label="Type" center>
         <div className="rbn-type-wrap">
           <GearTypeSelector value={activeMode} onChange={onSetActiveMode} />
         </div>
@@ -108,7 +150,7 @@ export default function ToolRibbon({
         </Grp>
         <RDiv />
         <Grp label="Tooth Profile">
-          <PASeg value={pa} onChange={onSetPressureAngle} />
+          <PAStepper value={pa} onChange={onSetPressureAngle} />
         </Grp>
         <RDiv />
         <Grp label="Units">
@@ -146,7 +188,7 @@ export default function ToolRibbon({
         </Grp>
         <RDiv />
         <Grp label="Tooth Profile">
-          <PASeg value={rackPinion.pressureAngleDeg}
+          <PAStepper value={rackPinion.pressureAngleDeg}
             onChange={v => onSetRackPinion({ pressureAngleDeg: v })} />
         </Grp>
         <RDiv />
@@ -155,11 +197,13 @@ export default function ToolRibbon({
             min={rackMinLength(rackPinion)} max={200} step={5}
             onChange={v => onSetRackPinion({ rackLengthMm: Math.min(200, Math.max(v, rackMinLength(rackPinion))) })} />
         </Grp>
-        <RDiv />
-        <Grp label="Face Width">
-          <NumIn value={rackPinion.thicknessMm} min={5} max={50}
-            onChange={v => onSetRackPinion({ thicknessMm: v })} />
-        </Grp>
+        {!is3d && <>
+          <RDiv />
+          <Grp label="Face Width">
+            <NumIn value={rackPinion.thicknessMm} min={5} max={50}
+              onChange={v => onSetRackPinion({ thicknessMm: v })} />
+          </Grp>
+        </>}
       </>}
 
       {/* ── Internal Gear ────────────────────────────── */}
@@ -176,7 +220,7 @@ export default function ToolRibbon({
         </Grp>
         <RDiv />
         <Grp label="Pressure Angle">
-          <PASeg value={internalGear.pressureAngleDeg}
+          <PAStepper value={internalGear.pressureAngleDeg}
             onChange={v => onSetInternalGear({ pressureAngleDeg: v })} />
         </Grp>
         <RDiv />
@@ -188,11 +232,13 @@ export default function ToolRibbon({
             ))}
           </div>
         </Grp>
-        <RDiv />
-        <Grp label="Face Width">
-          <NumIn value={internalGear.thicknessMm} min={5} max={50}
-            onChange={v => onSetInternalGear({ thicknessMm: v })} />
-        </Grp>
+        {!is3d && <>
+          <RDiv />
+          <Grp label="Face Width">
+            <NumIn value={internalGear.thicknessMm} min={5} max={50}
+              onChange={v => onSetInternalGear({ thicknessMm: v })} />
+          </Grp>
+        </>}
         {!internalGearValid(internalGear) && <>
           <RDiv />
           <div className="rbn-warn-area">
@@ -224,7 +270,7 @@ export default function ToolRibbon({
         </Grp>
         <RDiv />
         <Grp label="Pressure Angle">
-          <PASeg value={planetary.pressureAngleDeg} onChange={v => onSetPlanetary({ pressureAngleDeg: v })} />
+          <PAStepper value={planetary.pressureAngleDeg} onChange={v => onSetPlanetary({ pressureAngleDeg: v })} />
         </Grp>
         <RDiv />
         <Grp label="Ring Teeth">
@@ -242,6 +288,65 @@ export default function ToolRibbon({
         </>}
       </>}
 
+      {/* ── Helical Gear ─────────────────────────────── */}
+      {activeMode === 'helical' && <>
+        <Grp label="Teeth">
+          <TeethStepper label="Output" value={helical.outputTeeth} onChange={v => onSetHelical({ outputTeeth: v })} />
+          <TeethStepper label="Input"  value={helical.inputTeeth}  onChange={v => onSetHelical({ inputTeeth: v })} />
+        </Grp>
+        <RDiv />
+        <Grp label="Module">
+          <ModSel value={helical.moduleMm} onChange={v => onSetHelical({ moduleMm: v })} />
+        </Grp>
+        <RDiv />
+        <Grp label="Tooth Profile">
+          <PAStepper value={helical.pressureAngleDeg} onChange={v => onSetHelical({ pressureAngleDeg: v })} />
+        </Grp>
+        <RDiv />
+        <Grp label="Helix Angle">
+          <div className="rbn-face-slider">
+            <input type="range" min={10} max={35} step={1} value={helical.helixAngleDeg}
+              onChange={e => onSetHelical({ helixAngleDeg: parseInt(e.target.value) })} />
+            <span className="rbn-face-val">{helical.helixAngleDeg}°</span>
+          </div>
+        </Grp>
+      </>}
+
+      {/* ── Herringbone (Double Helical) ─────────────── */}
+      {activeMode === 'herringbone' && <>
+        <Grp label="Teeth">
+          <TeethStepper label="Output" value={herringbone.outputTeeth} onChange={v => onSetHerringbone({ outputTeeth: v })} />
+          <TeethStepper label="Input"  value={herringbone.inputTeeth}  onChange={v => onSetHerringbone({ inputTeeth: v })} />
+        </Grp>
+        <RDiv />
+        <Grp label="Module">
+          <ModSel value={herringbone.moduleMm} onChange={v => onSetHerringbone({ moduleMm: v })} />
+        </Grp>
+        <RDiv />
+        <Grp label="Tooth Profile">
+          <PAStepper value={herringbone.pressureAngleDeg} onChange={v => onSetHerringbone({ pressureAngleDeg: v })} />
+        </Grp>
+        <RDiv />
+        <Grp label="Helix Angle">
+          <div className="rbn-face-slider">
+            <input type="range" min={10} max={35} step={1} value={herringbone.helixAngleDeg}
+              onChange={e => onSetHerringbone({ helixAngleDeg: parseInt(e.target.value) })} />
+            <span className="rbn-face-val">{herringbone.helixAngleDeg}°</span>
+          </div>
+        </Grp>
+      </>}
+
+      {/* ── Face Width slider (3D only) ───────────────── */}
+      {showFaceSlider && <>
+        <RDiv />
+        <Grp label="Face Width">
+          <FaceSlider
+            value={faceWidthMm} unitSystem={unitSystem} onChange={onSetFaceWidth}
+            min={activeMode === 'herringbone' ? 5 : 3}
+          />
+        </Grp>
+      </>}
+
       {/* ── Spacer ───────────────────────────────────── */}
       <div className="rbn-spacer" />
 
@@ -251,7 +356,7 @@ export default function ToolRibbon({
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/>
           </svg>
-          Export
+          <span>Export</span>
         </button>
       </div>
 

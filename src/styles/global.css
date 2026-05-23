@@ -30,6 +30,12 @@ button:focus-visible {
   to { transform: rotate(360deg); }
 }
 
+@keyframes seg-pop {
+  0%   { transform: scale(0.86); }
+  60%  { transform: scale(1.07); }
+  100% { transform: scale(1.0); }
+}
+
 /* ===== App layout (Session 1 shell — moved to CSS Modules in Session 2) ===== */
 
 #root { width: 100%; height: 100%; }
@@ -45,10 +51,9 @@ button:focus-visible {
 
 .topbar {
   height: 48px;
-  background: rgba(255,255,255,0.94);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 0 rgba(15,18,23,0.04);
+  background: var(--black);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 2px 8px -2px rgba(0,0,0,0.35);
   position: relative; z-index: 20;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 16px 0 16px;
@@ -57,7 +62,7 @@ button:focus-visible {
 
 .logo {
   display: flex; align-items: center; gap: 0;
-  color: var(--text-strong);
+  color: var(--white);
   font-family: var(--font-display);
   font-weight: 700; font-size: 15px; letter-spacing: 0.4px;
   white-space: nowrap; flex-shrink: 0;
@@ -76,7 +81,7 @@ button:focus-visible {
   transform-origin: center;
 }
 .gear-o::after {
-  content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--white);
+  content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--black);
 }
 
 .topbar-center {
@@ -86,15 +91,15 @@ button:focus-visible {
 }
 .topbar-project {
   font-family: var(--font-mono); font-size: 11px; font-weight: 600;
-  color: var(--text-strong); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--white); letter-spacing: 0.06em; text-transform: uppercase;
   white-space: nowrap; flex-shrink: 0;
 }
 .topbar-sep {
-  color: var(--text-muted); font-size: 13px; opacity: 0.4; flex-shrink: 0;
+  color: rgba(255,255,255,0.3); font-size: 13px; flex-shrink: 0;
 }
 .topbar-summary {
   font-family: var(--font-mono); font-size: 11px;
-  color: var(--text-muted); letter-spacing: 0.02em;
+  color: rgba(255,255,255,0.5); letter-spacing: 0.02em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -109,14 +114,15 @@ button:focus-visible {
 .icon-action svg { width: 18px; height: 18px; stroke-width: 2; }
 
 .download {
-  height: 36px; padding: 0 14px; border: none;
+  min-height: 52px; padding: 6px 20px; border: none;
   background: var(--red); color: var(--white);
-  display: flex; align-items: center; gap: 7px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   border-radius: 8px;
-  font-family: var(--font); font-weight: 500; font-size: 13px;
+  font-family: var(--font); font-weight: 600; font-size: 11px; letter-spacing: 0.04em;
   box-shadow: 0 2px 8px -2px rgba(230, 0, 35, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
   transition: all 0.16s ease;
 }
+.download svg { width: 20px; height: 20px; stroke-width: 2; flex-shrink: 0; }
 .download:hover { background: var(--red-deep); transform: translateY(-1px); }
 .download:active { transform: translateY(0); }
 
@@ -197,6 +203,7 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .segmented button.active {
   background: var(--white); color: var(--text-strong);
   box-shadow: var(--shadow-soft); font-weight: 600;
+  animation: seg-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ===== Teeth stepper ===== */
@@ -244,9 +251,9 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 
 .ribbon {
   height: 80px;
-  background: rgba(255,255,255,0.97);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 4px -2px rgba(15,18,23,0.06);
+  background: #eef0f4;
+  border-bottom: 1px solid rgba(15,18,23,0.1);
+  box-shadow: 0 2px 6px -2px rgba(15,18,23,0.08);
   position: relative; z-index: 18;
   display: flex; align-items: stretch;
   overflow-x: auto; overflow-y: hidden;
@@ -255,38 +262,82 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 
 .rbn-group {
   display: flex; flex-direction: column;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid rgba(15,18,23,0.1);
   flex-shrink: 0;
 }
 .rbn-controls {
   flex: 1;
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 10px 0;
+  display: flex; align-items: flex-end; gap: 6px;
+  padding: 0 10px 8px;
 }
 .rbn-label {
   height: 16px; line-height: 16px; flex-shrink: 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(15,18,23,0.08);
   text-align: center; padding: 0 8px;
-  font-family: var(--font-mono); font-size: 8.5px; font-weight: 500;
-  letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted);
+  font-family: var(--font-mono); font-size: 8.5px; font-weight: 600;
+  letter-spacing: 0.07em; text-transform: uppercase; color: #6b7585;
   white-space: nowrap;
 }
 
 .rbn-divider {
-  width: 1px; background: var(--border); flex-shrink: 0; align-self: stretch;
+  width: 1px; background: rgba(15,18,23,0.1); flex-shrink: 0; align-self: stretch;
 }
 .rbn-spacer { flex: 1; min-width: 8px; }
 
 /* Ribbon override — compact controls to fit 80px height */
-.ribbon .stepper         { height: 32px; border-radius: 7px; }
-.ribbon .mini-label      { font-size: 8.5px; margin-top: 1px; letter-spacing: 0.04em; }
+.ribbon .stepper         { height: 34px; border-radius: 7px; grid-template-columns: 30px 1fr 30px; border-color: rgba(15,18,23,0.15); background: var(--white); }
+.ribbon .stepper button  { color: var(--text); }
+.ribbon .mini-label      { font-size: 8.5px; margin-bottom: 2px; margin-top: 0; letter-spacing: 0.04em; color: #6b7585; font-weight: 600; }
 
 /* Export zone (right-anchored, no redundant label) */
 .rbn-export-zone {
   display: flex; align-items: center;
   padding: 0 14px;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid rgba(15,18,23,0.1);
   flex-shrink: 0;
+}
+
+/* rbn-controls variant: centered (for Type selector) */
+.rbn-controls--center { align-items: center; padding-bottom: 0; padding-top: 4px; }
+
+/* Face width slider (3D only) */
+.rbn-face-slider {
+  display: flex; align-items: center; gap: 8px;
+  height: 34px;
+}
+.rbn-face-slider input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 90px; height: 16px;
+  background: transparent;
+  cursor: pointer; border: none; padding: 0; margin: 0;
+}
+.rbn-face-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: rgba(15,18,23,0.15);
+  border-radius: 2px;
+}
+.rbn-face-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--red); cursor: pointer;
+  margin-top: -6px;
+  box-shadow: 0 2px 6px rgba(230,0,35,0.35);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.rbn-face-slider input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 10px rgba(230,0,35,0.45);
+}
+.rbn-face-slider input[type="range"]::-moz-range-track {
+  height: 4px; background: rgba(15,18,23,0.15); border-radius: 2px;
+}
+.rbn-face-slider input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%; border: none;
+  background: var(--red); cursor: pointer;
+}
+.rbn-face-val {
+  font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;
+  color: var(--text-strong); white-space: nowrap; min-width: 44px;
 }
 
 /* Module select */
@@ -299,14 +350,14 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 }
 .rbn-select {
   appearance: none; -webkit-appearance: none;
-  height: 32px; padding: 0 24px 0 9px;
-  border: 1px solid var(--border); border-radius: 7px; background: var(--white);
+  height: 34px; padding: 0 24px 0 9px;
+  border: 1px solid rgba(15,18,23,0.15); border-radius: 7px; background: var(--white);
   box-shadow: var(--shadow-soft);
   font-family: var(--font-mono); font-size: 11.5px; font-weight: 500;
   color: var(--text-strong); cursor: pointer; width: 104px;
   transition: border-color 0.14s ease;
 }
-.rbn-select:hover  { border-color: rgba(15,18,23,0.12); }
+.rbn-select:hover  { border-color: rgba(15,18,23,0.22); }
 .rbn-select:focus  { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(230,0,35,0.1); }
 
 /* Compact segmented for ribbon */
@@ -315,8 +366,8 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 
 /* Number input (rack length, face width, etc.) */
 .rbn-number {
-  width: 76px; height: 32px; padding: 0 8px; text-align: center;
-  border: 1px solid var(--border); border-radius: 7px; background: var(--white);
+  width: 76px; height: 34px; padding: 0 8px; text-align: center;
+  border: 1px solid rgba(15,18,23,0.15); border-radius: 7px; background: var(--white);
   box-shadow: var(--shadow-soft);
   font-family: var(--font-mono); font-size: 12px; font-weight: 500;
   color: var(--text-strong);
@@ -328,9 +379,41 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .rbn-number:hover { border-color: rgba(15,18,23,0.12); }
 .rbn-number:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(230,0,35,0.1); }
 
-/* Type selector wrapper */
-.rbn-type-wrap { width: 160px; }
-.rbn-type-wrap .text-input { height: 32px; font-size: 11.5px; }
+/* Pressure angle stepper */
+.rbn-pa-stepper {
+  height: 34px; border-radius: 7px;
+  background: var(--white); border: 1px solid rgba(15,18,23,0.15);
+  box-shadow: var(--shadow-soft);
+  display: grid; grid-template-columns: 30px 1fr 30px;
+  min-width: 108px;
+  overflow: hidden; transition: border-color 0.16s ease;
+}
+.rbn-pa-stepper:hover { border-color: rgba(15,18,23,0.12); }
+.rbn-pa-stepper:focus-within { border-color: var(--red); box-shadow: 0 0 0 3px rgba(230,0,35,0.1); }
+.rbn-pa-stepper button {
+  border: 0; background: transparent; color: var(--text);
+  font-size: 15px; font-weight: 500; line-height: 1;
+  transition: all 0.14s ease;
+}
+.rbn-pa-stepper button:hover:not(:disabled) { background: var(--red-soft); color: var(--red); }
+.rbn-pa-stepper button:disabled { opacity: 0.3; cursor: default; }
+.rbn-pa-value {
+  display: flex; align-items: center; justify-content: center; gap: 1px;
+  border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+}
+.rbn-pa-value input {
+  border: 0; outline: 0; width: 28px; text-align: right; padding: 0;
+  background: transparent;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  color: var(--text-strong);
+  appearance: textfield; -moz-appearance: textfield;
+}
+.rbn-pa-value input::-webkit-inner-spin-button,
+.rbn-pa-value input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.rbn-pa-value span {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-muted); font-weight: 500;
+}
 
 /* Ratio / derived-value badge */
 .rbn-ratio-badge {
@@ -447,24 +530,37 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .gts-option:hover .gts-label  { color: var(--red); }
 
 /* Ribbon override — compact horizontal layout to fit 80px ribbon */
-.rbn-type-wrap { width: 190px; }
+.rbn-type-wrap { width: 200px; }
 .rbn-type-wrap .gts-trigger {
   border-radius: 8px;
-  flex-direction: row;
-  padding: 0 8px;
+  display: grid;
+  grid-template-columns: 46px 1fr 14px;
+  align-items: center;
+  padding: 0 8px 0 8px;
   height: 54px;
   gap: 8px;
-  justify-content: flex-start;
 }
-.rbn-type-wrap .gts-trigger .gts-icon { width: 36px; height: 36px; }
+.rbn-type-wrap .gts-trigger .gts-icon {
+  width: 46px; height: 46px;
+  grid-column: 1;
+}
 .rbn-type-wrap .gts-trigger .gts-label {
+  grid-column: 2;
   text-align: left;
   font-size: 10px;
-  flex: 1;
   white-space: normal;
-  line-height: 1.3;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--text-strong);
+  min-width: 0;
+  max-width: 76px;
 }
-.rbn-type-wrap .gts-caret { position: static; bottom: auto; right: auto; }
+.rbn-type-wrap .gts-caret {
+  grid-column: 3;
+  position: static;
+  bottom: auto; right: auto;
+  flex-shrink: 0;
+}
 .rbn-type-wrap .gts-dropdown { border-radius: 10px; }
 
 /* ===== App grid overlay (major grid + red radial glow) ===== */
@@ -612,7 +708,7 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 
 /* ===== Topbar divider between logo and center ===== */
 .topbar-divider {
-  width: 1px; height: 20px; background: var(--border); flex-shrink: 0;
+  width: 1px; height: 20px; background: rgba(255,255,255,0.12); flex-shrink: 0;
 }
 
 /* ===== Export modal ===== */
@@ -662,6 +758,17 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
   border-right: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   padding: 28px; overflow: hidden;
+  position: relative;
+}
+
+@keyframes kerf-detail-in {
+  from { opacity: 0; transform: scale(0.94) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+.kerf-detail-overlay {
+  position: absolute; bottom: 18px; right: 18px; z-index: 10;
+  pointer-events: none;
+  animation: kerf-detail-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .export-preview-img {
   max-width: 100%; max-height: 100%;

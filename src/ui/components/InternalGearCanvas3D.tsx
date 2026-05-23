@@ -104,7 +104,7 @@ export default function InternalGearCanvas3D({ ringTeeth, pinionTeeth, moduleMm,
       group.add(pinPivot);
 
       const geoRing = makeRingGeo(THREE, ringTeeth, moduleMm, pressureAngleDeg, thicknessMm, wallThicknessMm);
-      const geoPin  = makeSpurGeo(THREE, pinionTeeth, moduleMm, pressureAngleDeg, thicknessMm, R_ring);
+      const geoPin  = makeSpurGeo(THREE, pinionTeeth, moduleMm, pressureAngleDeg, thicknessMm, R_pin);
       ringPivot.add(makeFill(THREE, geoRing), makeEdges(THREE, geoRing));
       pinPivot.add(makeFill(THREE, geoPin),   makeEdges(THREE, geoPin));
 

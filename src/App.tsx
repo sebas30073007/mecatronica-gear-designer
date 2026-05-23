@@ -14,12 +14,14 @@ export default function App() {
   const [showExport, setShowExport] = useState(false);
 
   const {
-    gears, setTeeth, setModule, setPressureAngle,
+    gears, setTeeth, setModule, setPressureAngle, setThickness,
     view, unitSystem, activeMode,
     setViewMode, setUnitSystem, setActiveMode,
     rackPinion, setRackPinion,
     internalGear, setInternalGear,
     planetary, setPlanetary,
+    helical, setHelical,
+    herringbone, setHerringbone,
   } = useGearStore();
 
   const g1 = gears[0] as SpurGear;
@@ -34,6 +36,28 @@ export default function App() {
 
   const is3d      = view.mode === '3d';
   const canToggle = !is3dOnly(activeMode);
+
+  const faceWidthMm = (() => {
+    switch (activeMode) {
+      case 'rack-pinion': return rackPinion.thicknessMm;
+      case 'internal':    return internalGear.thicknessMm;
+      case 'planetary':   return planetary.thicknessMm;
+      case 'helical':      return helical.thicknessMm;
+      case 'herringbone':  return herringbone.thicknessMm;
+      default:             return g1.thicknessMm;
+    }
+  })();
+
+  const handleSetFaceWidth = (mm: number) => {
+    switch (activeMode) {
+      case 'rack-pinion': setRackPinion({ thicknessMm: mm }); break;
+      case 'internal':    setInternalGear({ thicknessMm: mm }); break;
+      case 'planetary':   setPlanetary({ thicknessMm: mm }); break;
+      case 'helical':     setHelical({ thicknessMm: mm }); break;
+      case 'herringbone': setHerringbone({ thicknessMm: mm }); break;
+      default:            setThickness(mm); break;
+    }
+  };
 
   const designSummary = (() => {
     const fmtM = (m: number) => `m${Number.isInteger(m) ? m : m.toFixed(2)}`;
@@ -67,13 +91,16 @@ export default function App() {
       <ToolRibbon
         g1={g1} g2={g2}
         moduleMm={moduleMm} pa={pa} unitSystem={unitSystem} activeMode={activeMode}
-        warnings={warnings}
+        warnings={warnings} is3d={is3d}
+        faceWidthMm={faceWidthMm} onSetFaceWidth={handleSetFaceWidth}
         rackPinion={rackPinion} internalGear={internalGear} planetary={planetary}
         onSetTeeth={setTeeth} onSetModule={setModule}
         onSetPressureAngle={setPressureAngle} onSetUnitSystem={setUnitSystem}
         onSetActiveMode={handleSetActiveMode}
         onSetRackPinion={setRackPinion} onSetInternalGear={setInternalGear}
         onSetPlanetary={setPlanetary}
+        helical={helical} onSetHelical={setHelical}
+        herringbone={herringbone} onSetHerringbone={setHerringbone}
         onExportClick={() => setShowExport(true)}
       />
 
@@ -88,6 +115,7 @@ export default function App() {
         g1={g1} g2={g2} moduleMm={moduleMm} pa={pa} ratio={ratio}
         unitSystem={unitSystem} is3d={is3d} activeMode={activeMode}
         rackPinion={rackPinion} internalGear={internalGear} planetary={planetary}
+        helical={helical}
       />
 
       {showExport && (

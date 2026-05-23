@@ -141,6 +141,17 @@ export interface InternalGearParams {
 export const internalGearValid = (p: InternalGearParams) =>
   p.ringTeeth - p.pinionTeeth >= 8 && p.ringTeeth >= 24;
 
+// ── Helical Gear parameters ───────────────────────────────────────────────────
+
+export interface HelicalParams {
+  outputTeeth:      number;   // 8–80
+  inputTeeth:       number;   // 8–80
+  moduleMm:         number;   // 1.0–3.0
+  pressureAngleDeg: number;   // 20–30
+  helixAngleDeg:    number;   // 10–45  (°)
+  thicknessMm:      number;   // 3–30 face width
+}
+
 // ── Planetary Gear parameters ─────────────────────────────────────────────────
 
 export interface PlanetaryParams {

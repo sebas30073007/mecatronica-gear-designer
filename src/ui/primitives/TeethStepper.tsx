@@ -10,6 +10,7 @@ export default function TeethStepper({ label, value, onChange, min = 8, max = 20
   const clamp = (n: number) => Math.max(min, Math.min(max, n));
   return (
     <div>
+      <div className="mini-label">{label}</div>
       <div className="stepper">
         <button onClick={() => onChange(clamp(value - 1))}>−</button>
         <input
@@ -18,7 +19,6 @@ export default function TeethStepper({ label, value, onChange, min = 8, max = 20
         />
         <button onClick={() => onChange(clamp(value + 1))}>+</button>
       </div>
-      <div className="mini-label">{label}</div>
     </div>
   );
 }
