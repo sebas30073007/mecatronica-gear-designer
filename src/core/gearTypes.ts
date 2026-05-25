@@ -20,9 +20,10 @@ export type ActiveMode =
   | 'compound'
   | 'helical'
   | 'bevel'
-  | 'herringbone';
+  | 'herringbone'
+  | 'worm';
 
-export const MODES_3D_ONLY: ActiveMode[] = ['compound', 'helical', 'bevel', 'herringbone'];
+export const MODES_3D_ONLY: ActiveMode[] = ['compound', 'helical', 'bevel', 'herringbone', 'worm'];
 export const is3dOnly = (mode: ActiveMode) => MODES_3D_ONLY.includes(mode);
 
 export type ViewMode = '2d' | '3d';
@@ -45,9 +46,12 @@ export interface BaseGear {
   isFixed?: boolean;
 }
 
+export type BoreType = 'd-shaft' | 'keyway' | 'round' | 'none';
+
 export interface SpurGear extends BaseGear {
   kind: 'spur';
   boreDiameterMm: number;
+  boreType: BoreType;
   thicknessMm: number;
 }
 
@@ -140,6 +144,16 @@ export interface InternalGearParams {
 /** ring - pinion must be ≥ 8 to avoid interference */
 export const internalGearValid = (p: InternalGearParams) =>
   p.ringTeeth - p.pinionTeeth >= 8 && p.ringTeeth >= 24;
+
+// ── Worm Gear parameters ──────────────────────────────────────────────────────
+
+export interface WormParams {
+  starts:           1 | 2 | 3 | 4;  // number of thread starts (roscas)
+  wheelTeeth:       number;           // 15–80
+  moduleMm:         number;
+  pressureAngleDeg: number;           // 20–30
+  thicknessMm:      number;           // 5–30 (wheel face width)
+}
 
 // ── Helical Gear parameters ───────────────────────────────────────────────────
 

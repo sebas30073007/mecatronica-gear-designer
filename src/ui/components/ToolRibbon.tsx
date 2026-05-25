@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type {
-  SpurGear, ActiveMode, UnitSystem,
-  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams,
+  SpurGear, ActiveMode, UnitSystem, BoreType,
+  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams, WormParams,
 } from '../../core/gearTypes';
 import { rackMinLength, internalGearValid, planetaryRingTeeth, planetarySpacingOk } from '../../core/gearTypes';
 import type { ValidationWarning } from '../../core/validation';
@@ -30,7 +30,11 @@ interface Props {
   onSetHelical:      (u: Partial<HelicalParams>) => void;
   herringbone: HelicalParams;
   onSetHerringbone:  (u: Partial<HelicalParams>) => void;
+  worm: WormParams;
+  onSetWorm:         (u: Partial<WormParams>) => void;
   onSetFaceWidth:    (mm: number) => void;
+  onSetBoreType:     (id: string, type: BoreType) => void;
+  onSetBoreDiameter: (id: string, mm: number) => void;
   onExportClick:  () => void;
 }
 
@@ -117,13 +121,49 @@ function FaceSlider({ value, unitSystem, onChange, min = 3 }: {
   );
 }
 
+const BORE_OPTS: { label: string; value: BoreType; title: string }[] = [
+  { label: 'D',   value: 'd-shaft', title: 'D-shaft' },
+  { label: 'Key', value: 'keyway',  title: 'Keyway'  },
+  { label: '○',   value: 'round',   title: 'Round'   },
+  { label: '—',   value: 'none',    title: 'No bore' },
+];
+
+function BoreGroup({ label, gear, onSetType, onSetDiameter }: {
+  label: string;
+  gear: SpurGear;
+  onSetType: (type: BoreType) => void;
+  onSetDiameter: (mm: number) => void;
+}) {
+  return (
+    <Grp label={label}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className="segmented rbn-segmented cols-4">
+          {BORE_OPTS.map(o => (
+            <button key={o.value} title={o.title}
+              className={gear.boreType === o.value ? 'active' : ''}
+              onClick={() => onSetType(o.value)}>{o.label}</button>
+          ))}
+        </div>
+        {gear.boreType !== 'none' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <NumIn value={gear.boreDiameterMm} min={2} max={50}
+              onChange={onSetDiameter} />
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>mm</span>
+          </div>
+        )}
+      </div>
+    </Grp>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ToolRibbon({
   g1, g2, moduleMm, pa, unitSystem, activeMode, warnings, is3d,
-  faceWidthMm, rackPinion, internalGear, planetary, helical, herringbone,
+  faceWidthMm, rackPinion, internalGear, planetary, helical, herringbone, worm,
   onSetTeeth, onSetModule, onSetPressureAngle, onSetUnitSystem, onSetActiveMode,
-  onSetRackPinion, onSetInternalGear, onSetPlanetary, onSetHelical, onSetHerringbone, onSetFaceWidth,
+  onSetRackPinion, onSetInternalGear, onSetPlanetary, onSetHelical, onSetHerringbone, onSetWorm, onSetFaceWidth,
+  onSetBoreType, onSetBoreDiameter,
   onExportClick,
 }: Props) {
   const showFaceSlider = is3d;
@@ -167,6 +207,14 @@ export default function ToolRibbon({
             ))}
           </div>
         </>}
+        <RDiv />
+        <BoreGroup label="Bore · Output" gear={g1}
+          onSetType={t => onSetBoreType(g1.id, t)}
+          onSetDiameter={d => onSetBoreDiameter(g1.id, d)} />
+        <RDiv />
+        <BoreGroup label="Bore · Input" gear={g2}
+          onSetType={t => onSetBoreType(g2.id, t)}
+          onSetDiameter={d => onSetBoreDiameter(g2.id, d)} />
       </>}
 
       {/* ── Rack & Pinion ────────────────────────────── */}
@@ -336,13 +384,38 @@ export default function ToolRibbon({
         </Grp>
       </>}
 
+      {/* ── Worm (Sin Fin) ───────────────────────────── */}
+      {activeMode === 'worm' && <>
+        <Grp label="Starts (Roscas)">
+          <div className="segmented rbn-segmented cols-4">
+            {([1, 2, 3, 4] as const).map(s => (
+              <button key={s} className={worm.starts === s ? 'active' : ''}
+                onClick={() => onSetWorm({ starts: s })}>{s}</button>
+            ))}
+          </div>
+        </Grp>
+        <RDiv />
+        <Grp label="Wheel Teeth">
+          <TeethStepper label="Teeth" value={worm.wheelTeeth} min={15} max={80}
+            onChange={v => onSetWorm({ wheelTeeth: v })} />
+        </Grp>
+        <RDiv />
+        <Grp label="Module">
+          <ModSel value={worm.moduleMm} onChange={v => onSetWorm({ moduleMm: v })} />
+        </Grp>
+        <RDiv />
+        <Grp label="Tooth Profile">
+          <PAStepper value={worm.pressureAngleDeg} onChange={v => onSetWorm({ pressureAngleDeg: v })} />
+        </Grp>
+      </>}
+
       {/* ── Face Width slider (3D only) ───────────────── */}
       {showFaceSlider && <>
         <RDiv />
         <Grp label="Face Width">
           <FaceSlider
             value={faceWidthMm} unitSystem={unitSystem} onChange={onSetFaceWidth}
-            min={activeMode === 'herringbone' ? 5 : 3}
+            min={activeMode === 'herringbone' || activeMode === 'worm' ? 5 : 3}
           />
         </Grp>
       </>}

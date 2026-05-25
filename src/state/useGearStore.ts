@@ -1,22 +1,22 @@
 import { create } from 'zustand';
 import type {
-  GearDesignState, SpurGear, ViewMode,
+  GearDesignState, SpurGear, ViewMode, BoreType,
   FabricationMode, FabricationState2D, FabricationState3D,
-  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams,
+  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams, WormParams,
 } from '../core/gearTypes';
 
 const g1: SpurGear = {
   id: 'g1', name: 'Output Gear', kind: 'spur',
   teeth: 54, moduleMm: 2, pressureAngleDeg: 20,
   x: 0, y: 0, rotationDeg: 0,
-  isOutput: true, boreDiameterMm: 8, thicknessMm: 10,
+  isOutput: true, boreDiameterMm: 8, boreType: 'd-shaft', thicknessMm: 10,
 };
 
 const g2: SpurGear = {
   id: 'g2', name: 'Input Gear', kind: 'spur',
   teeth: 18, moduleMm: 2, pressureAngleDeg: 20,
   x: 0, y: 0, rotationDeg: 0,
-  rpm: 1500, isInput: true, boreDiameterMm: 6, thicknessMm: 10,
+  rpm: 1500, isInput: true, boreDiameterMm: 6, boreType: 'd-shaft', thicknessMm: 10,
 };
 
 export const initialState: GearDesignState = {
@@ -58,6 +58,12 @@ const defaultHerringbone: HelicalParams = {
   helixAngleDeg: 20, thicknessMm: 20,
 };
 
+const defaultWorm: WormParams = {
+  starts: 2, wheelTeeth: 40,
+  moduleMm: 2, pressureAngleDeg: 20,
+  thicknessMm: 15,
+};
+
 const defaultFab2d: FabricationState2D = {
   showOutline: true,
   showCenters: true,
@@ -77,6 +83,8 @@ const defaultFab3d: FabricationState3D = {
 
 interface GearStore extends GearDesignState {
   setTeeth: (id: string, teeth: number) => void;
+  setBoreDiameter: (id: string, mm: number) => void;
+  setBoreType: (id: string, type: BoreType) => void;
   setModule: (moduleMm: number) => void;
   setInputRpm: (rpm: number) => void;
   setPressureAngle: (deg: number) => void;
@@ -100,6 +108,9 @@ interface GearStore extends GearDesignState {
   // Herringbone state
   herringbone: HelicalParams;
   setHerringbone: (u: Partial<HelicalParams>) => void;
+  // Worm gear state
+  worm: WormParams;
+  setWorm: (u: Partial<WormParams>) => void;
   // Fabrication state
   fabricationMode: FabricationMode;
   fab2d: FabricationState2D;
@@ -116,12 +127,17 @@ export const useGearStore = create<GearStore>()((set) => ({
   planetary: defaultPlanetary,
   helical: defaultHelical,
   herringbone: defaultHerringbone,
+  worm: defaultWorm,
   fabricationMode: '2d-laser',
   fab2d: defaultFab2d,
   fab3d: defaultFab3d,
 
   setTeeth: (id, teeth) =>
     set((s) => ({ gears: s.gears.map((g) => (g.id === id ? { ...g, teeth } : g)) })),
+  setBoreDiameter: (id, boreDiameterMm) =>
+    set((s) => ({ gears: s.gears.map((g) => (g.id === id ? { ...g, boreDiameterMm } : g)) })),
+  setBoreType: (id, boreType) =>
+    set((s) => ({ gears: s.gears.map((g) => (g.id === id ? { ...g, boreType } : g)) })),
   setModule: (moduleMm) =>
     set((s) => ({ gears: s.gears.map((g) => ({ ...g, moduleMm })) })),
   setInputRpm: (rpm) =>
@@ -141,6 +157,7 @@ export const useGearStore = create<GearStore>()((set) => ({
   setPlanetary: (u) => set((s) => ({ planetary: { ...s.planetary, ...u } })),
   setHelical: (u) => set((s) => ({ helical: { ...s.helical, ...u } })),
   setHerringbone: (u) => set((s) => ({ herringbone: { ...s.herringbone, ...u } })),
+  setWorm: (u) => set((s) => ({ worm: { ...s.worm, ...u } })),
   setFabricationMode: (fabricationMode) => set({ fabricationMode }),
   setFab2d: (updates) => set((s) => ({ fab2d: { ...s.fab2d, ...updates } })),
   setFab3d: (updates) => set((s) => ({ fab3d: { ...s.fab3d, ...updates } })),

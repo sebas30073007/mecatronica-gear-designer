@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type * as T3 from 'three';
 import type { HelicalParams } from '../../core/gearTypes';
 import { generateSpurGearOutline } from '../../geometry/spurGear2D';
 
 type TM = typeof T3;
 
+const DEBOUNCE_MS = 900;
 const RED     = 0xc8202a;
 const GRID    = 0xf2c8cc;
 const OMEGA   = 0.006;
@@ -15,10 +16,13 @@ const ISO_Y   = 1.02 / ISO_LEN;
 const ISO_Z   = 0.82 / ISO_LEN;
 
 // Build one helical half (centered at z=0, spans [-depth/2, +depth/2]).
-// Identical pattern to HelicalGearCanvas3D — proven stable in Three.js r184.
+// isTop=false (bottom half): twist goes 0→totalTwist (flat outer face, peak at midplane).
+// isTop=true  (top half):    twist goes totalTwist→0 (peak at midplane, flat outer face).
+// Together they form the Λ/V herringbone shape with C0 continuity at z=0.
 function buildHalf(
   THREE: TM, teeth: number, moduleMm: number, pa: number,
-  depth: number, helixSign: number, helixAngleDeg: number
+  depth: number, helixSign: number, helixAngleDeg: number,
+  isTop: boolean
 ): T3.BufferGeometry {
   const prof  = generateSpurGearOutline({ teeth, moduleMm, pressureAngleDeg: pa });
   const shape = new THREE.Shape();
@@ -43,8 +47,10 @@ function buildHalf(
   const pos        = geo.attributes.position as T3.BufferAttribute;
 
   for (let i = 0; i < pos.count; i++) {
-    const z     = pos.getZ(i);                    // [0, depth] before center()
-    const angle = (z / depth - 0.5) * totalTwist; // symmetric: 0 at mid-plane
+    const z     = pos.getZ(i);          // [0, depth] before center()
+    const t     = z / depth;
+    // bottom: 0→totalTwist; top: totalTwist→0 (mirror formula)
+    const angle = isTop ? (t - 1) * totalTwist : t * totalTwist;
     const x = pos.getX(i), y = pos.getY(i);
     pos.setXY(i,
       x * Math.cos(angle) - y * Math.sin(angle),
@@ -67,8 +73,8 @@ function attachHerringbone(
 ): () => void {
   const half = Math.max(thicknessMm, 5) / 2;
 
-  const gBot = buildHalf(THREE, teeth, moduleMm, pa, half, +helixSign, helixAngleDeg);
-  const gTop = buildHalf(THREE, teeth, moduleMm, pa, half, -helixSign, helixAngleDeg);
+  const gBot = buildHalf(THREE, teeth, moduleMm, pa, half, +helixSign, helixAngleDeg, false);
+  const gTop = buildHalf(THREE, teeth, moduleMm, pa, half, -helixSign, helixAngleDeg, true);
   const eBot = new THREE.EdgesGeometry(gBot, 12);
   const eTop = new THREE.EdgesGeometry(gTop, 12);
 
@@ -103,8 +109,10 @@ export default function HerringboneGearCanvas3D({
   const oldGeoRef = useRef<(() => void) | null>(null);
   const scRef     = useRef(1);
   const boundRef  = useRef(3.5);
-  const ratioRef  = useRef({ z1: outputTeeth, z2: inputTeeth });
-  const spinRef   = useRef({ s1: 0, s2: 0 });
+  const ratioRef   = useRef({ z1: outputTeeth, z2: inputTeeth });
+  const spinRef    = useRef({ s1: 0, s2: 0 });
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   function rebuildGears(THREE: TM) {
     const pivot1 = pivot1Ref.current, pivot2 = pivot2Ref.current;
@@ -145,7 +153,7 @@ export default function HerringboneGearCanvas3D({
       threeRef.current = THREE;
 
       const w = canvas.clientWidth || 900, h = canvas.clientHeight || 550;
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(w, h, false);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setClearColor(0xffffff, 1);
@@ -234,11 +242,24 @@ export default function HerringboneGearCanvas3D({
   }, []);
 
   useEffect(() => {
-    const THREE = threeRef.current;
-    if (!THREE) return;
-    rebuildGears(THREE);
+    if (!threeRef.current) return;
+    setIsLoading(true);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const T = threeRef.current;
+        if (T) rebuildGears(T);
+        setIsLoading(false);
+      }));
+    }, DEBOUNCE_MS);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outputTeeth, inputTeeth, moduleMm, pressureAngleDeg, helixAngleDeg, thicknessMm]);
 
-  return <div className="gear3d-wrap"><canvas ref={canvasRef} className="gear3d-canvas" /></div>;
+  return (
+    <div className="gear3d-wrap">
+      <canvas ref={canvasRef} className="gear3d-canvas" />
+      {isLoading && <div className="gear3d-loading"><div className="gear3d-spinner" /></div>}
+    </div>
+  );
 }

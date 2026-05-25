@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type * as T3 from 'three';
 import type { SpurGear, ViewMode } from '../../core/gearTypes';
 import { generateSpurGearOutline } from '../../geometry/spurGear2D';
+import { generateBoreOutline } from '../../geometry/borePath';
 
 type TM = typeof T3;
 
@@ -26,14 +27,13 @@ function buildGearGeo(THREE: TM, gear: SpurGear, moduleMm: number, pa: number) {
   const shape = new THREE.Shape();
   prof.outline.forEach((p, i) => i === 0 ? shape.moveTo(p.x, p.y) : shape.lineTo(p.x, p.y));
   shape.closePath();
-  const boreR = Math.max(prof.rootRadius * 0.28, moduleMm);
-  const hole  = new THREE.Path();
-  for (let i = 0; i <= 32; i++) {
-    const a = (i / 32) * Math.PI * 2;
-    if (i === 0) hole.moveTo(Math.cos(a) * boreR, Math.sin(a) * boreR);
-    else         hole.lineTo(Math.cos(a) * boreR, Math.sin(a) * boreR);
+  const boreD   = Math.max(gear.boreDiameterMm, moduleMm * 2);
+  const borePts = generateBoreOutline(gear.boreType, boreD);
+  if (borePts.length > 0) {
+    const hole = new THREE.Path();
+    borePts.forEach((p, i) => { if (i === 0) hole.moveTo(p.x, p.y); else hole.lineTo(p.x, p.y); });
+    shape.holes.push(hole);
   }
-  shape.holes.push(hole);
   const geo = new THREE.ExtrudeGeometry(shape, {
     depth: Math.max(gear.thicknessMm, 2), bevelEnabled: false, curveSegments: 12,
   });
@@ -105,7 +105,7 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa, viewMode }: Props) 
       threeRef.current = THREE;
 
       const w = canvas.clientWidth || 900, h = canvas.clientHeight || 550;
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(w, h, false);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setClearColor(0xffffff, 1);

@@ -15,6 +15,7 @@ export default function App() {
 
   const {
     gears, setTeeth, setModule, setPressureAngle, setThickness,
+    setBoreType, setBoreDiameter,
     view, unitSystem, activeMode,
     setViewMode, setUnitSystem, setActiveMode,
     rackPinion, setRackPinion,
@@ -22,6 +23,7 @@ export default function App() {
     planetary, setPlanetary,
     helical, setHelical,
     herringbone, setHerringbone,
+    worm, setWorm,
   } = useGearStore();
 
   const g1 = gears[0] as SpurGear;
@@ -44,6 +46,7 @@ export default function App() {
       case 'planetary':   return planetary.thicknessMm;
       case 'helical':      return helical.thicknessMm;
       case 'herringbone':  return herringbone.thicknessMm;
+      case 'worm':         return worm.thicknessMm;
       default:             return g1.thicknessMm;
     }
   })();
@@ -55,6 +58,7 @@ export default function App() {
       case 'planetary':   setPlanetary({ thicknessMm: mm }); break;
       case 'helical':     setHelical({ thicknessMm: mm }); break;
       case 'herringbone': setHerringbone({ thicknessMm: mm }); break;
+      case 'worm':        setWorm({ thicknessMm: mm }); break;
       default:            setThickness(mm); break;
     }
   };
@@ -75,6 +79,7 @@ export default function App() {
       case 'helical':     return 'Helical Gear';
       case 'bevel':       return 'Bevel Gear';
       case 'herringbone': return 'Herringbone Gear';
+      case 'worm':        return `Worm Gear · z${worm.wheelTeeth} / ${worm.starts}-start · i=${(worm.wheelTeeth / worm.starts).toFixed(1)}`;
       default:            return 'Gear Designer';
     }
   })();
@@ -97,10 +102,12 @@ export default function App() {
         onSetTeeth={setTeeth} onSetModule={setModule}
         onSetPressureAngle={setPressureAngle} onSetUnitSystem={setUnitSystem}
         onSetActiveMode={handleSetActiveMode}
+        onSetBoreType={setBoreType} onSetBoreDiameter={setBoreDiameter}
         onSetRackPinion={setRackPinion} onSetInternalGear={setInternalGear}
         onSetPlanetary={setPlanetary}
         helical={helical} onSetHelical={setHelical}
         herringbone={herringbone} onSetHerringbone={setHerringbone}
+        worm={worm} onSetWorm={setWorm}
         onExportClick={() => setShowExport(true)}
       />
 
@@ -115,13 +122,13 @@ export default function App() {
         g1={g1} g2={g2} moduleMm={moduleMm} pa={pa} ratio={ratio}
         unitSystem={unitSystem} is3d={is3d} activeMode={activeMode}
         rackPinion={rackPinion} internalGear={internalGear} planetary={planetary}
-        helical={helical}
+        helical={helical} herringbone={herringbone} worm={worm}
       />
 
       {showExport && (
         <ExportModal
           g1={g1} g2={g2} moduleMm={moduleMm} pa={pa}
-          is3d={is3d}
+          is3d={is3d} activeMode={activeMode}
           onClose={() => setShowExport(false)}
         />
       )}

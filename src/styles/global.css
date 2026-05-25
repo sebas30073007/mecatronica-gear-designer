@@ -681,6 +681,22 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 }
 .gear3d-canvas:active { cursor: grabbing; }
 
+.gear3d-loading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+}
+.gear3d-spinner {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 3px solid var(--red-soft);
+  border-top-color: var(--red);
+  animation: gear3d-spin 0.75s linear infinite;
+  filter: drop-shadow(0 2px 8px rgba(200,32,42,0.28));
+}
+@keyframes gear3d-spin { to { transform: rotate(360deg); } }
+
 .gear3d-style-btn {
   position: absolute; bottom: 22px; right: 22px; z-index: 8;
   height: 34px; padding: 0 14px;
@@ -740,6 +756,12 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
   font-family: var(--font-display); font-size: 16px; font-weight: 600;
   color: var(--text-strong); letter-spacing: -0.01em;
 }
+.export-mode-badge {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--red); background: var(--red-soft);
+  padding: 3px 8px; border-radius: 20px;
+}
 .modal-close-btn {
   width: 34px; height: 34px; border: none;
   background: transparent; color: var(--text-muted);
@@ -756,9 +778,25 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .export-modal-preview {
   flex: 1; background: #f7f8f9;
   border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 28px 28px 20px; overflow: hidden;
+  position: relative; gap: 12px;
+}
+.export-preview-label {
+  position: absolute; top: 12px; left: 0; right: 0;
+  text-align: center;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.export-preview-snap {
+  border-radius: 10px;
+  box-shadow: 0 4px 20px -4px rgba(10,12,16,0.18), 0 0 0 1px rgba(10,12,16,0.06);
+  background: #fff;
+}
+.export-static-preview {
+  width: 100%; max-width: 360px;
   display: flex; align-items: center; justify-content: center;
-  padding: 28px; overflow: hidden;
-  position: relative;
 }
 
 @keyframes kerf-detail-in {

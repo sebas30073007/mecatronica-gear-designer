@@ -4,14 +4,17 @@
  */
 
 import { generateSpurGearOutline } from '../geometry/spurGear2D';
+import { generateBoreOutline } from '../geometry/borePath';
 import { pointsToSvgPath } from '../geometry/polar';
 import type { Point2D } from '../geometry/polar';
+import type { BoreType } from '../core/gearTypes';
 
 export interface GearExportParams {
   teeth: number;
   moduleMm: number;
   pressureAngleDeg: number;
   boreDiameterMm: number;
+  boreType?: BoreType;
   label?: string;
 }
 
@@ -70,6 +73,13 @@ function pitchGroup(circles: Array<{ cx: number; cy: number; r: number }>, axisL
   return `  <g id="layer-pitch">\n${arcs}${axisLine ?? ''}\n  </g>`;
 }
 
+function boreSvgPath(type: BoreType, diameterMm: number, cx: number, cy: number): string {
+  if (type === 'none' || diameterMm <= 0) return '';
+  if (type === 'round') return circlePath(cx, cy, diameterMm / 2);
+  const pts = generateBoreOutline(type, diameterMm);
+  return pts.length ? toAbsPath(pts, cx, cy) : circlePath(cx, cy, diameterMm / 2);
+}
+
 function centerMark(cx: number, cy: number, size = 2.5): string {
   return [
     `    <line x1="${f(cx - size)}" y1="${f(cy)}" x2="${f(cx + size)}" y2="${f(cy)}"/>`,
@@ -87,9 +97,9 @@ export function exportSingleGearSvg(params: GearExportParams, opts: SvgExportOpt
   const size = (geo.outerRadius + marginMm) * 2;
   const cx = size / 2, cy = size / 2;
 
-  // Apply kerf to outline points (inward) and expand bore
   const outlinePoints = applyKerfToOutline(geo.outline, kerfOffsetMm);
-  const boreR = params.boreDiameterMm / 2 + kerfOffsetMm;
+  const boreEffD = params.boreDiameterMm + kerfOffsetMm * 2;
+  const boreType = params.boreType ?? 'round';
 
   const label = params.label ?? `Gear-${params.teeth}T-M${params.moduleMm}`;
   const date  = new Date().toISOString().split('T')[0]!;
@@ -115,7 +125,7 @@ ${construction}
 ${pitch}
   <g id="layer-cut" fill="none" stroke="#000000" stroke-width="0.1" stroke-linejoin="round" stroke-linecap="round">
     <path id="gear-outline" d="${toAbsPath(outlinePoints, cx, cy)}"/>
-    <path id="bore" d="${circlePath(cx, cy, boreR)}"/>
+    <path id="bore" d="${boreSvgPath(boreType, boreEffD, cx, cy)}"/>
   </g>
   <g id="center-mark" stroke="#cc0000" stroke-width="0.15" opacity="0.5">
 ${centerMark(cx, cy)}
@@ -171,10 +181,12 @@ export function exportGearPairSvg(
     axisLine,
   ) : '';
 
-  const out1 = applyKerfToOutline(geo1.outline, kerfOffsetMm);
-  const out2 = applyKerfToOutline(geo2.outline, kerfOffsetMm);
-  const bore1R = gear1.boreDiameterMm / 2 + kerfOffsetMm;
-  const bore2R = gear2.boreDiameterMm / 2 + kerfOffsetMm;
+  const out1   = applyKerfToOutline(geo1.outline, kerfOffsetMm);
+  const out2   = applyKerfToOutline(geo2.outline, kerfOffsetMm);
+  const bore1D = gear1.boreDiameterMm + kerfOffsetMm * 2;
+  const bore2D = gear2.boreDiameterMm + kerfOffsetMm * 2;
+  const boreType1 = gear1.boreType ?? 'round';
+  const boreType2 = gear2.boreType ?? 'round';
 
   const pairLabel = showLabels
     ? `  <g id="layer-labels" font-family="monospace" fill="#666666">` +
@@ -194,9 +206,9 @@ ${construction}
 ${pitch}
   <g id="layer-cut" fill="none" stroke="#000000" stroke-width="0.1" stroke-linejoin="round" stroke-linecap="round">
     <path id="gear1-outline" d="${toAbsPath(out1, cx1, cy1)}"/>
-    <path id="bore1" d="${circlePath(cx1, cy1, bore1R)}"/>
+    <path id="bore1" d="${boreSvgPath(boreType1, bore1D, cx1, cy1)}"/>
     <path id="gear2-outline" d="${toAbsPath(out2, cx2, cy2)}"/>
-    <path id="bore2" d="${circlePath(cx2, cy2, bore2R)}"/>
+    <path id="bore2" d="${boreSvgPath(boreType2, bore2D, cx2, cy2)}"/>
   </g>
   <g id="center-marks" stroke="#cc0000" stroke-width="0.15" opacity="0.5">
 ${centerMark(cx1, cy1)}

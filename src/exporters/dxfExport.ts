@@ -4,6 +4,7 @@
  */
 
 import { generateSpurGearOutline } from '../geometry/spurGear2D';
+import { generateBoreOutline } from '../geometry/borePath';
 import type { GearExportParams } from './svgExport';
 
 export interface DxfExportOptions {
@@ -31,6 +32,15 @@ function dxfPolyline(pts: Array<{ x: number; y: number }>, layer: string): strin
     `0\nVERTEX\n8\n${layer}\n10\n${f(p.x)}\n20\n${f(p.y)}\n30\n0.0000\n`,
   ).join('');
   return `${header}${verts}0\nSEQEND\n8\n${layer}\n`;
+}
+
+function dxfBore(params: GearExportParams, cx: number, cy: number): string {
+  const type = params.boreType ?? 'round';
+  const d = params.boreDiameterMm;
+  if (type === 'none') return '';
+  if (type === 'round') return dxfCircle(cx, cy, d / 2, 'BORE');
+  const pts = generateBoreOutline(type, d).map(p => ({ x: cx + p.x, y: cy + p.y }));
+  return pts.length ? dxfPolyline(pts, 'BORE') : dxfCircle(cx, cy, d / 2, 'BORE');
 }
 
 function dxfLayerDef(name: string, color: number): string {
@@ -86,7 +96,7 @@ export function exportSingleGearDxf(params: GearExportParams, opts: DxfExportOpt
 
   const entities: string[] = [
     dxfPolyline(geo.outline, 'CUT'),
-    dxfCircle(0, 0, params.boreDiameterMm / 2, 'BORE'),
+    dxfBore(params, 0, 0),
   ];
 
   if (showPitchCircle)  entities.push(dxfCircle(0, 0, geo.pitchRadius, 'CONSTRUCTION'));
@@ -121,8 +131,8 @@ export function exportGearPairDxf(
     dxfPolyline(geo1.outline, 'CUT'),
     dxfPolyline(geo2.outline.map(p => ({ x: p.x + cx2, y: p.y + cy2 })), 'CUT'),
     // Bores
-    dxfCircle(0, 0, gear1.boreDiameterMm / 2, 'BORE'),
-    dxfCircle(cx2, cy2, gear2.boreDiameterMm / 2, 'BORE'),
+    dxfBore(gear1, 0, 0),
+    dxfBore(gear2, cx2, cy2),
   ];
 
   if (showPitchCircle) {

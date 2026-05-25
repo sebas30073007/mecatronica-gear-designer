@@ -37,7 +37,7 @@ export function KerfDetailView({ kerf, moduleMm }: Props) {
 
   // Right-flank dimension line
   const ay = by - TOOTH_H * 0.48;
-  const xO = orig[3][0], xC = comp[3][0];
+  const xO = orig[3]![0], xC = comp[3]![0];
 
   // Bore arc (right panel)
   const bcx = 183, bcy = 80, R0 = 17, R1 = R0 + kv;

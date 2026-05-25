@@ -10,6 +10,7 @@ import compuestoImg  from '../../../assets/img/compuesto.png';
 import helicalImg    from '../../../assets/img/helicoidal.png';
 import conicoImg     from '../../../assets/img/conico.png';
 import herringboneImg from '../../../assets/img/helicoidal doble.png';
+import wormImg        from '../../../assets/img/sin_fin.png';
 
 const ICONS: Record<ActiveMode, string> = {
   simple:        rectoImg,
@@ -20,6 +21,7 @@ const ICONS: Record<ActiveMode, string> = {
   helical:       helicalImg,
   bevel:         conicoImg,
   herringbone:   herringboneImg,
+  worm:          wormImg,
 };
 
 const CATALOG = [
@@ -31,6 +33,7 @@ const CATALOG = [
   { value: 'helical'     as ActiveMode, label: 'Helical Gear Pair',            view: '3d-only' },
   { value: 'bevel'       as ActiveMode, label: 'Bevel (Conic) Gear',           view: '3d-only' },
   { value: 'herringbone' as ActiveMode, label: 'Herringbone (Double Helical)', view: '3d-only' },
+  { value: 'worm'        as ActiveMode, label: 'Worm Gear (Sin Fin)',          view: '3d-only' },
 ];
 
 const toggleable = CATALOG.filter(e => e.view === '2d-3d');

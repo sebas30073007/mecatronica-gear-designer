@@ -84,7 +84,7 @@ export default function InternalGearCanvas3D({ ringTeeth, pinionTeeth, moduleMm,
       const sceneBound = outerR * SC * 1.15;
 
       const w = canvas.clientWidth || 900, h = canvas.clientHeight || 550;
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(w, h, false);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setClearColor(0xffffff, 1);

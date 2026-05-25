@@ -78,7 +78,7 @@ export default function RackPinionCanvas3D({ pinionTeeth, moduleMm, pressureAngl
       const centerY    = -R1_mm * SC * 0.3;   // look-at y: between pinion and rack
 
       const w = canvas.clientWidth || 900, h = canvas.clientHeight || 550;
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(w, h, false);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setClearColor(0xffffff, 1);

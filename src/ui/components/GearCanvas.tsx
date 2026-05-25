@@ -1,4 +1,4 @@
-import type { SpurGear, UnitSystem, ActiveMode, RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams } from '../../core/gearTypes';
+import type { SpurGear, UnitSystem, ActiveMode, RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams, WormParams } from '../../core/gearTypes';
 import { fmtModule } from '../../core/units';
 import StaticGearPreview from './StaticGearPreview';
 import GearCanvas3D from './GearCanvas3D';
@@ -7,8 +7,9 @@ import InternalGearCanvas3D from './InternalGearCanvas3D';
 import PlanetaryCanvas3D from './PlanetaryCanvas3D';
 import HelicalGearCanvas3D from './HelicalGearCanvas3D';
 import HerringboneGearCanvas3D from './HerringboneGearCanvas3D';
+import WormGearCanvas3D from './WormGearCanvas3D';
 
-const LIVE_MODES: ActiveMode[] = ['simple', 'rack-pinion', 'internal', 'planetary', 'helical', 'herringbone'];
+const LIVE_MODES: ActiveMode[] = ['simple', 'rack-pinion', 'internal', 'planetary', 'helical', 'herringbone', 'worm'];
 
 interface Props {
   g1: SpurGear; g2: SpurGear; moduleMm: number; pa: number; ratio: number;
@@ -19,10 +20,11 @@ interface Props {
   planetary: PlanetaryParams;
   helical: HelicalParams;
   herringbone: HelicalParams;
+  worm: WormParams;
 }
 
 export default function GearCanvas({
-  g1, g2, moduleMm, pa, ratio, unitSystem, is3d, activeMode, rackPinion, internalGear, planetary, helical, herringbone,
+  g1, g2, moduleMm, pa, ratio, unitSystem, is3d, activeMode, rackPinion, internalGear, planetary, helical, herringbone, worm,
 }: Props) {
   const isLive = LIVE_MODES.includes(activeMode);
   const viewMode = is3d ? '3d' : '2d';
@@ -64,6 +66,9 @@ export default function GearCanvas({
 
       {activeMode === 'herringbone' &&
         <HerringboneGearCanvas3D {...herringbone} />}
+
+      {activeMode === 'worm' &&
+        <WormGearCanvas3D {...worm} />}
 
       {/* Placeholder for modes without a live canvas yet */}
       {!isLive && <StaticGearPreview activeMode={activeMode} is3d={is3d} />}

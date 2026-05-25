@@ -211,6 +211,34 @@ function HerringbonePreview() {
   );
 }
 
+function WormPreview() {
+  const wxL = 130, wxR = 490, wY1 = 155, wY2 = 205; // worm band
+  const cx = 310, cy = 320, r = 75;                   // wheel center
+  const helixLines = [-60, -40, -20, 0, 20, 40, 60].map(dx => ({ dx }));
+  return (
+    <>
+      {/* Worm shaft */}
+      <rect x={wxL} y={wY1} width={wxR - wxL} height={wY2 - wY1} rx={20}
+        fill="var(--bg)" stroke="var(--red)" strokeWidth={1.8} />
+      {/* Helical thread lines on worm */}
+      <clipPath id="worm-clip">
+        <rect x={wxL + 1} y={wY1 + 1} width={wxR - wxL - 2} height={wY2 - wY1 - 2} rx={19} />
+      </clipPath>
+      <g clipPath="url(#worm-clip)" opacity={0.5}>
+        {helixLines.map((l, i) => (
+          <line key={i}
+            x1={cx + l.dx - 15} y1={wY1}
+            x2={cx + l.dx + 15} y2={wY2}
+            stroke="var(--red)" strokeWidth={1.5} />
+        ))}
+      </g>
+      {/* Worm wheel */}
+      <Gear cx={cx} cy={cy} r={r} teeth={16} h={10} bore={10} />
+      <Badge label="Worm Gear (Sin Fin) — 3D Only" />
+    </>
+  );
+}
+
 interface Props {
   activeMode: ActiveMode;
   is3d: boolean;
@@ -227,6 +255,7 @@ export default function StaticGearPreview({ activeMode, is3d }: Props) {
       case 'helical':    return <HelicalPreview />;
       case 'bevel':      return <BevelPreview />;
       case 'herringbone':return <HerringbonePreview />;
+      case 'worm':       return <WormPreview />;
     }
   })();
 

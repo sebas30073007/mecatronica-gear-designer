@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type * as T3 from 'three';
 import type { HelicalParams } from '../../core/gearTypes';
 import { generateSpurGearOutline } from '../../geometry/spurGear2D';
 
 type TM = typeof T3;
 
+const DEBOUNCE_MS = 900;
 const RED    = 0xc8202a;
 const GRID   = 0xf2c8cc;
 const OMEGA  = 0.006;
@@ -71,8 +72,10 @@ export default function HelicalGearCanvas3D({
   const oldGeoRef = useRef<(() => void) | null>(null);
   const scRef     = useRef(1);
   const boundRef  = useRef(3.5);
-  const ratioRef  = useRef({ z1: outputTeeth, z2: inputTeeth });
-  const spinRef   = useRef({ s1: 0, s2: 0 });
+  const ratioRef   = useRef({ z1: outputTeeth, z2: inputTeeth });
+  const spinRef    = useRef({ s1: 0, s2: 0 });
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   function rebuildGears(THREE: TM) {
     const pivot1 = pivot1Ref.current, pivot2 = pivot2Ref.current;
@@ -125,7 +128,7 @@ export default function HelicalGearCanvas3D({
       threeRef.current = THREE;
 
       const w = canvas.clientWidth || 900, h = canvas.clientHeight || 550;
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(w, h, false);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setClearColor(0xffffff, 1);
@@ -215,11 +218,24 @@ export default function HelicalGearCanvas3D({
   }, []);
 
   useEffect(() => {
-    const THREE = threeRef.current;
-    if (!THREE) return;
-    rebuildGears(THREE);
+    if (!threeRef.current) return;
+    setIsLoading(true);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const T = threeRef.current;
+        if (T) rebuildGears(T);
+        setIsLoading(false);
+      }));
+    }, DEBOUNCE_MS);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outputTeeth, inputTeeth, moduleMm, pressureAngleDeg, helixAngleDeg, thicknessMm]);
 
-  return <div className="gear3d-wrap"><canvas ref={canvasRef} className="gear3d-canvas" /></div>;
+  return (
+    <div className="gear3d-wrap">
+      <canvas ref={canvasRef} className="gear3d-canvas" />
+      {isLoading && <div className="gear3d-loading"><div className="gear3d-spinner" /></div>}
+    </div>
+  );
 }
