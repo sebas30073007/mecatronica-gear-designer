@@ -237,7 +237,7 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa, viewMode }: Props) 
     if (!THREE) return;
     rebuildGears(THREE);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [g1.teeth, g2.teeth, g1.boreDiameterMm, g2.boreDiameterMm, moduleMm, pa, g1.thicknessMm, g2.thicknessMm]);
+  }, [g1.teeth, g2.teeth, g1.boreDiameterMm, g2.boreDiameterMm, g1.boreType, g2.boreType, moduleMm, pa, g1.thicknessMm, g2.thicknessMm]);
 
   return <div className="gear3d-wrap"><canvas ref={canvasRef} className="gear3d-canvas" /></div>;
 }

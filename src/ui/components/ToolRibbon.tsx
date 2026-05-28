@@ -215,6 +215,31 @@ export default function ToolRibbon({
         <BoreGroup label="Bore · Input" gear={g2}
           onSetType={t => onSetBoreType(g2.id, t)}
           onSetDiameter={d => onSetBoreDiameter(g2.id, d)} />
+        <RDiv />
+        <Grp label="Face Width">
+          <FaceSlider value={faceWidthMm} unitSystem={unitSystem} onChange={onSetFaceWidth} min={3} />
+        </Grp>
+        <RDiv />
+        <Grp label="Gear Info">
+          <div className="rbn-info-stack">
+            <span className="rbn-info-row">
+              <span className="rbn-info-key">CD</span>
+              <span className="rbn-info-val">{((g1.teeth + g2.teeth) * moduleMm / 2).toFixed(1)} mm</span>
+            </span>
+            <span className="rbn-info-row">
+              <span className="rbn-info-key">i</span>
+              <span className="rbn-info-val">{(g1.teeth / g2.teeth).toFixed(2)} : 1</span>
+            </span>
+            <span className="rbn-info-row">
+              <span className="rbn-info-key">PD₁</span>
+              <span className="rbn-info-val">{(g1.teeth * moduleMm).toFixed(1)} mm</span>
+            </span>
+            <span className="rbn-info-row">
+              <span className="rbn-info-key">PD₂</span>
+              <span className="rbn-info-val">{(g2.teeth * moduleMm).toFixed(1)} mm</span>
+            </span>
+          </div>
+        </Grp>
       </>}
 
       {/* ── Rack & Pinion ────────────────────────────── */}
@@ -409,8 +434,8 @@ export default function ToolRibbon({
         </Grp>
       </>}
 
-      {/* ── Face Width slider (3D only) ───────────────── */}
-      {showFaceSlider && <>
+      {/* ── Face Width slider (3D only, non-simple modes) ─ */}
+      {showFaceSlider && activeMode !== 'simple' && <>
         <RDiv />
         <Grp label="Face Width">
           <FaceSlider

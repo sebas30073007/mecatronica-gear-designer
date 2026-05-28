@@ -4,11 +4,12 @@ import { exportSingleGearSvg, exportGearPairSvg } from '../../exporters/svgExpor
 import { exportSingleGearDxf, exportGearPairDxf } from '../../exporters/dxfExport';
 import { exportGearStl, exportGearObj } from '../../exporters/meshExport';
 import { downloadSvg, downloadDxf, downloadStl, downloadObj } from '../../exporters/download';
+import { exportSpurGearStep } from '../../exporters/stepExport';
 import { KerfDetailView } from './KerfDetailView';
 import StaticGearPreview from './StaticGearPreview';
 
 type Bundle = 'separate' | 'combined';
-type Format = 'svg' | 'dxf' | 'stl' | 'obj';
+type Format = 'svg' | 'dxf' | 'stl' | 'obj' | 'step';
 
 // Modes that have a live Three.js canvas in the DOM
 const CANVAS_MODES: ActiveMode[] = [
@@ -59,6 +60,8 @@ export default function ExportModal({ g1, g2, moduleMm, pa, is3d, activeMode, on
   const [thickness]   = useState(g1.thicknessMm);
   const [svgUrl,      setSvgUrl]      = useState('');
   const [snapshotUrl, setSnapshotUrl] = useState('');
+  const [isLoading,   setIsLoading]   = useState(false);
+  const [stepError,   setStepError]   = useState('');
 
   const p1   = { teeth: g1.teeth, moduleMm, pressureAngleDeg: pa, boreDiameterMm: g1.boreDiameterMm, boreType: g1.boreType, label: 'Output-Gear' };
   const p2   = { teeth: g2.teeth, moduleMm, pressureAngleDeg: pa, boreDiameterMm: g2.boreDiameterMm, boreType: g2.boreType, label: 'Input-Gear' };
@@ -131,13 +134,39 @@ export default function ExportModal({ g1, g2, moduleMm, pa, is3d, activeMode, on
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centers, pitch, labels, kerf, g1.teeth, g2.teeth, moduleMm, pa, activeMode, is3d]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const m     = moduleMm;
     const mesh1 = { ...p1, thicknessMm: thickness };
     const mesh2 = { ...p2, thicknessMm: thickness };
     const f1    = (ext: string) => `gear-output-${g1.teeth}T-M${m}.${ext}`;
     const f2    = (ext: string) => `gear-input-${g2.teeth}T-M${m}.${ext}`;
     const fp    = (ext: string) => `gear-pair-${g1.teeth}T-${g2.teeth}T-M${m}.${ext}`;
+
+    if (format === 'step') {
+      setIsLoading(true);
+      setStepError('');
+      const toStepBore = (t: SpurGear['boreType']): 'd-shaft' | 'keyway' | 'round' | 'none' =>
+        t === 'd-shaft' || t === 'keyway' || t === 'round' ? t : 'none';
+      try {
+        await exportSpurGearStep({
+          teeth: g1.teeth, module_mm: m, pressure_angle_deg: pa,
+          thickness_mm: g1.thicknessMm, bore_mm: g1.boreDiameterMm ?? null,
+          bore_type: toStepBore(g1.boreType), label: `output-${g1.teeth}T`,
+        });
+        if (bundle === 'separate') {
+          await exportSpurGearStep({
+            teeth: g2.teeth, module_mm: m, pressure_angle_deg: pa,
+            thickness_mm: g2.thicknessMm, bore_mm: g2.boreDiameterMm ?? null,
+            bore_type: toStepBore(g2.boreType), label: `input-${g2.teeth}T`,
+          });
+        }
+      } catch (e) {
+        setStepError(e instanceof Error ? e.message : 'Error desconocido');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
     if (format === 'svg') {
       if (bundle === 'separate') {
@@ -243,16 +272,18 @@ export default function ExportModal({ g1, g2, moduleMm, pa, is3d, activeMode, on
                   <button className={format === 'dxf' ? 'active' : ''} onClick={() => setFormat('dxf')}>DXF R12</button>
                 </div>
               ) : (
-                <div className="segmented cols-2" style={{ fontSize: 13 }}>
+                <div className="segmented cols-3" style={{ fontSize: 13 }}>
                   <button className={format === 'stl' ? 'active' : ''} onClick={() => setFormat('stl')}>STL</button>
                   <button className={format === 'obj' ? 'active' : ''} onClick={() => setFormat('obj')}>OBJ</button>
+                  <button className={format === 'step' ? 'active' : ''} onClick={() => setFormat('step')}>STEP</button>
                 </div>
               )}
               <p className="fab-hint" style={{ marginTop: 4 }}>
-                {format === 'svg' ? 'Vector, 1:1 scale, layers' :
-                 format === 'dxf' ? 'DXF R12 ASCII, CUT / BORE layers' :
-                 format === 'stl' ? 'ASCII STL, 3D printable mesh' :
-                                    'Wavefront OBJ, 3D mesh with vertices'}
+                {format === 'svg'  ? 'Vector, 1:1 scale, layers' :
+                 format === 'dxf'  ? 'DXF R12 ASCII, CUT / BORE layers' :
+                 format === 'stl'  ? 'ASCII STL, 3D printable mesh' :
+                 format === 'step' ? 'B-Rep STEP · CadQuery · calidad CNC/CAD · requiere red' :
+                                     'Wavefront OBJ, 3D mesh with vertices'}
               </p>
             </div>
 
@@ -295,12 +326,23 @@ export default function ExportModal({ g1, g2, moduleMm, pa, is3d, activeMode, on
             </>}
 
             {/* Export button */}
-            <button className="export-modal-btn" onClick={handleExport}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round"
-                   strokeLinejoin="round" strokeWidth={2.5}>
-                <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/>
-              </svg>
-              Export {format.toUpperCase()}
+            {format === 'step' && stepError && (
+              <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 0, marginBottom: 4 }}>
+                {stepError}
+              </p>
+            )}
+            <button className="export-modal-btn" onClick={handleExport} disabled={isLoading}>
+              {isLoading ? (
+                <span style={{ opacity: 0.75 }}>Generando STEP…</span>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round"
+                       strokeLinejoin="round" strokeWidth={2.5}>
+                    <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/>
+                  </svg>
+                  Export {format.toUpperCase()}
+                </>
+              )}
             </button>
 
           </div>

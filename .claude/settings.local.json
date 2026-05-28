@@ -32,7 +32,10 @@
       "Bash(curl -s http://localhost:5173)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
       "Bash(node *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "WebSearch",
+      "WebFetch(domain:replicad.xyz)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

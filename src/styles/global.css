@@ -425,6 +425,22 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 }
 .rbn-ratio-badge span { font-size: 8px; color: var(--text-muted); font-weight: 400; margin-top: 1px; }
 
+/* Gear info stack (simple mode) */
+.rbn-info-stack {
+  display: flex; flex-direction: column; gap: 3px; min-width: 110px;
+}
+.rbn-info-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+}
+.rbn-info-key {
+  font-size: 10px; color: var(--text-muted); font-weight: 500;
+  font-family: var(--font-mono); flex-shrink: 0;
+}
+.rbn-info-val {
+  font-size: 11px; color: var(--text-strong); font-weight: 600;
+  font-family: var(--font-mono);
+}
+
 /* Inline warning chips */
 .rbn-warn-area {
   display: flex; flex-direction: column; justify-content: center; gap: 4px;
