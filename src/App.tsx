@@ -8,10 +8,13 @@ import TopBar from './ui/components/TopBar';
 import ToolRibbon from './ui/components/ToolRibbon';
 import GearCanvas from './ui/components/GearCanvas';
 import ExportModal from './ui/components/ExportModal';
+import BoreEditModal from './ui/components/BoreEditModal';
+import type { BoreType } from './core/gearTypes';
 import './styles/global.css';
 
 export default function App() {
-  const [showExport, setShowExport] = useState(false);
+  const [showExport,   setShowExport]   = useState(false);
+  const [showBoreModal, setShowBoreModal] = useState(false);
 
   const {
     gears, setTeeth, setModule, setPressureAngle, setThickness,
@@ -84,6 +87,14 @@ export default function App() {
     }
   })();
 
+  const handleApplyBore = (
+    b1: { type: BoreType; diamMm: number },
+    b2: { type: BoreType; diamMm: number },
+  ) => {
+    setBoreType(g1.id, b1.type);   setBoreDiameter(g1.id, b1.diamMm);
+    setBoreType(g2.id, b2.type);   setBoreDiameter(g2.id, b2.diamMm);
+  };
+
   const handleSetActiveMode = (mode: ActiveMode) => {
     setActiveMode(mode);
     if (is3dOnly(mode)) setViewMode('3d' as ViewMode);
@@ -102,7 +113,7 @@ export default function App() {
         onSetTeeth={setTeeth} onSetModule={setModule}
         onSetPressureAngle={setPressureAngle} onSetUnitSystem={setUnitSystem}
         onSetActiveMode={handleSetActiveMode}
-        onSetBoreType={setBoreType} onSetBoreDiameter={setBoreDiameter}
+        onSetBoreType={setBoreType} onBoreEditClick={() => setShowBoreModal(true)}
         onSetRackPinion={setRackPinion} onSetInternalGear={setInternalGear}
         onSetPlanetary={setPlanetary}
         helical={helical} onSetHelical={setHelical}
@@ -124,6 +135,14 @@ export default function App() {
         rackPinion={rackPinion} internalGear={internalGear} planetary={planetary}
         helical={helical} herringbone={herringbone} worm={worm}
       />
+
+      {showBoreModal && activeMode === 'simple' && (
+        <BoreEditModal
+          g1={g1} g2={g2}
+          onApply={handleApplyBore}
+          onClose={() => setShowBoreModal(false)}
+        />
+      )}
 
       {showExport && (
         <ExportModal

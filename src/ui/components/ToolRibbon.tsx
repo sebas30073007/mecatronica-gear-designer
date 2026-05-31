@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import type {
   SpurGear, ActiveMode, UnitSystem, BoreType,
   RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams, WormParams,
@@ -8,6 +8,7 @@ import type { ValidationWarning } from '../../core/validation';
 import { fmtModule } from '../../core/units';
 import TeethStepper from '../primitives/TeethStepper';
 import GearTypeSelector from './GearTypeSelector';
+import BoreTypeSelector from './BoreTypeSelector';
 
 const MODULES_SMALL = [1.0, 1.25, 1.5, 2.0, 2.5, 3.0];
 
@@ -34,8 +35,8 @@ interface Props {
   onSetWorm:         (u: Partial<WormParams>) => void;
   onSetFaceWidth:    (mm: number) => void;
   onSetBoreType:     (id: string, type: BoreType) => void;
-  onSetBoreDiameter: (id: string, mm: number) => void;
-  onExportClick:  () => void;
+  onBoreEditClick:   () => void;
+  onExportClick:     () => void;
 }
 
 // ── Primitive ribbon building-blocks ─────────────────────────────────────────
@@ -67,13 +68,22 @@ function ModSel({ value, onChange }: { value: number; onChange: (v: number) => v
 function PAStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const MIN = 20, MAX = 30;
   const clamp = (v: number) => Math.min(MAX, Math.max(MIN, v));
+  const [raw, setRaw] = useState(String(value));
+  useEffect(() => { setRaw(String(value)); }, [value]);
+  const commit = () => {
+    const v = parseInt(raw, 10);
+    if (isNaN(v)) { setRaw(String(value)); return; }
+    const c = clamp(v); setRaw(String(c)); onChange(c);
+  };
   return (
     <div className="rbn-pa-stepper">
       <button onClick={() => onChange(clamp(value - 1))} disabled={value <= MIN}>−</button>
       <div className="rbn-pa-value">
         <input
-          type="number" min={MIN} max={MAX} step={1} value={value}
-          onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) onChange(clamp(v)); }}
+          type="number" min={MIN} max={MAX} step={1} value={raw}
+          onChange={e => setRaw(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === 'Enter') { commit(); (e.target as HTMLInputElement).blur(); } }}
         />
         <span>°</span>
       </div>
@@ -86,10 +96,18 @@ function NumIn({ value, min, max, step = 1, onChange }: {
   value: number; min: number; max: number; step?: number;
   onChange: (v: number) => void;
 }) {
+  const [raw, setRaw] = useState(String(value));
+  useEffect(() => { setRaw(String(value)); }, [value]);
+  const commit = () => {
+    const v = parseFloat(raw);
+    if (isNaN(v)) { setRaw(String(value)); return; }
+    const c = Math.min(max, Math.max(min, v)); setRaw(String(c)); onChange(c);
+  };
   return (
-    <input className="rbn-number" type="number"
-      min={min} max={max} step={step} value={value}
-      onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= min) onChange(v); }}
+    <input className="rbn-number" type="number" step={step} value={raw}
+      onChange={e => setRaw(e.target.value)}
+      onBlur={commit}
+      onKeyDown={e => { if (e.key === 'Enter') { commit(); (e.target as HTMLInputElement).blur(); } }}
     />
   );
 }
@@ -121,40 +139,6 @@ function FaceSlider({ value, unitSystem, onChange, min = 3 }: {
   );
 }
 
-const BORE_OPTS: { label: string; value: BoreType; title: string }[] = [
-  { label: 'D',   value: 'd-shaft', title: 'D-shaft' },
-  { label: 'Key', value: 'keyway',  title: 'Keyway'  },
-  { label: '○',   value: 'round',   title: 'Round'   },
-  { label: '—',   value: 'none',    title: 'No bore' },
-];
-
-function BoreGroup({ label, gear, onSetType, onSetDiameter }: {
-  label: string;
-  gear: SpurGear;
-  onSetType: (type: BoreType) => void;
-  onSetDiameter: (mm: number) => void;
-}) {
-  return (
-    <Grp label={label}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div className="segmented rbn-segmented cols-4">
-          {BORE_OPTS.map(o => (
-            <button key={o.value} title={o.title}
-              className={gear.boreType === o.value ? 'active' : ''}
-              onClick={() => onSetType(o.value)}>{o.label}</button>
-          ))}
-        </div>
-        {gear.boreType !== 'none' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <NumIn value={gear.boreDiameterMm} min={2} max={50}
-              onChange={onSetDiameter} />
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>mm</span>
-          </div>
-        )}
-      </div>
-    </Grp>
-  );
-}
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -163,7 +147,7 @@ export default function ToolRibbon({
   faceWidthMm, rackPinion, internalGear, planetary, helical, herringbone, worm,
   onSetTeeth, onSetModule, onSetPressureAngle, onSetUnitSystem, onSetActiveMode,
   onSetRackPinion, onSetInternalGear, onSetPlanetary, onSetHelical, onSetHerringbone, onSetWorm, onSetFaceWidth,
-  onSetBoreType, onSetBoreDiameter,
+  onSetBoreType, onBoreEditClick,
   onExportClick,
 }: Props) {
   const showFaceSlider = is3d;
@@ -208,37 +192,19 @@ export default function ToolRibbon({
           </div>
         </>}
         <RDiv />
-        <BoreGroup label="Bore · Output" gear={g1}
-          onSetType={t => onSetBoreType(g1.id, t)}
-          onSetDiameter={d => onSetBoreDiameter(g1.id, d)} />
-        <RDiv />
-        <BoreGroup label="Bore · Input" gear={g2}
-          onSetType={t => onSetBoreType(g2.id, t)}
-          onSetDiameter={d => onSetBoreDiameter(g2.id, d)} />
+        <Grp label="Hole Type">
+          <div className="rbn-bore-wrap">
+            <BoreTypeSelector
+              g1BoreType={g1.boreType}
+              g2BoreType={g2.boreType}
+              onChange={type => { onSetBoreType(g1.id, type); onSetBoreType(g2.id, type); }}
+              onEditClick={onBoreEditClick}
+            />
+          </div>
+        </Grp>
         <RDiv />
         <Grp label="Face Width">
           <FaceSlider value={faceWidthMm} unitSystem={unitSystem} onChange={onSetFaceWidth} min={3} />
-        </Grp>
-        <RDiv />
-        <Grp label="Gear Info">
-          <div className="rbn-info-stack">
-            <span className="rbn-info-row">
-              <span className="rbn-info-key">CD</span>
-              <span className="rbn-info-val">{((g1.teeth + g2.teeth) * moduleMm / 2).toFixed(1)} mm</span>
-            </span>
-            <span className="rbn-info-row">
-              <span className="rbn-info-key">i</span>
-              <span className="rbn-info-val">{(g1.teeth / g2.teeth).toFixed(2)} : 1</span>
-            </span>
-            <span className="rbn-info-row">
-              <span className="rbn-info-key">PD₁</span>
-              <span className="rbn-info-val">{(g1.teeth * moduleMm).toFixed(1)} mm</span>
-            </span>
-            <span className="rbn-info-row">
-              <span className="rbn-info-key">PD₂</span>
-              <span className="rbn-info-val">{(g2.teeth * moduleMm).toFixed(1)} mm</span>
-            </span>
-          </div>
         </Grp>
       </>}
 

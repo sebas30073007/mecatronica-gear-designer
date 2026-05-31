@@ -57,9 +57,9 @@ def _apply_bore(result: cq.Workplane, bore_mm: float, bore_type: str) -> cq.Work
                   .cutThruAll())
 
     elif bore_type == "keyway":
-        # Rectangular slot protruding from bore surface (standard: w=d/4, depth=d/8)
+        # DIN 6885: width ≈ d/4; full key height ≈ width (square section, visually proportional)
         key_w    = bore_mm / 4
-        key_d    = bore_mm / 8
+        key_d    = key_w               # full key height cut into gear for clear geometry
         center_y = bore_r + key_d / 2
         result = (result.faces(">Z").workplane()
                   .transformed(offset=cq.Vector(0, center_y, 0))

@@ -874,6 +874,165 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .export-modal-btn:disabled { cursor: wait; }
 .export-modal-btn svg { width: 16px; height: 16px; stroke-width: 2.5; }
 
+/* ===== BoreTypeSelector — GTS-style ===== */
+.bts-wrap { display: flex; align-items: center; gap: 6px; }
+
+/* Ribbon wrapper: constrains width + uses GTS grid layout */
+.rbn-bore-wrap { width: 210px; }
+.rbn-bore-wrap .bts-trigger {
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 36px 1fr 10px;
+  grid-template-rows: 1fr;
+  align-items: center; gap: 8px;
+  padding: 6px 10px; height: 52px;
+}
+.rbn-bore-wrap .bts-trigger img,
+.rbn-bore-wrap .bts-trigger > div { grid-column: 1; }
+.rbn-bore-wrap .bts-label          { grid-column: 2; }
+.rbn-bore-wrap .bts-caret          { grid-column: 3; }
+
+/* Base trigger */
+.bts-trigger {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 9px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 8px; cursor: pointer;
+  font-family: var(--font); font-size: 12px; font-weight: 500; color: var(--text);
+  transition: border-color 0.14s, box-shadow 0.14s;
+  width: 100%;
+}
+.bts-trigger:hover { border-color: rgba(15,18,23,0.12); }
+.bts-trigger.open { border-color: var(--red); box-shadow: 0 0 0 3px rgba(230,0,35,0.1); }
+.bts-label { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--text-strong); }
+.bts-caret { flex-shrink: 0; transition: transform 0.18s ease; color: var(--text-muted); }
+.bts-caret.open { transform: rotate(180deg); }
+
+/* Edit button — prominent red accent */
+.bts-edit-btn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 0 12px; height: 32px; flex-shrink: 0;
+  background: var(--red-soft); border: 1.5px solid var(--red);
+  border-radius: 8px; cursor: pointer; color: var(--red);
+  font-family: var(--font); font-size: 11.5px; font-weight: 600;
+  transition: all 0.14s;
+  white-space: nowrap;
+}
+.bts-edit-btn:hover { background: var(--red); color: white; }
+.bts-edit-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+/* Dropdown */
+.bts-dropdown {
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+  overflow: hidden; z-index: 9999; padding: 4px 0;
+}
+.bts-separator { height: 1px; background: var(--border); margin: 4px 8px; }
+
+/* Standard options with image */
+.bts-option {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; height: 52px; padding: 0 12px;
+  background: none; border: none; cursor: pointer;
+  transition: background 0.11s;
+}
+.bts-opt-img { width: 38px; height: 38px; object-fit: contain; flex-shrink: 0; }
+.bts-opt-label {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  color: var(--text-strong); white-space: nowrap;
+}
+.bts-option:hover { background: var(--red-soft); }
+.bts-option:hover .bts-opt-label { color: var(--red); }
+.bts-option.active { background: var(--red-soft); }
+.bts-option.active .bts-opt-label { color: var(--red); font-weight: 600; }
+
+/* None option — muted, "absence" feel */
+.bts-option-none { opacity: 0.75; }
+.bts-opt-none-label { color: var(--text-muted) !important; font-style: italic; }
+.bts-option-none.active { opacity: 1; }
+.bts-option-none.active .bts-opt-none-label { color: var(--red) !important; font-style: normal; }
+
+/* ===== BoreEditModal ===== */
+.bore-modal { width: min(580px, 94vw) !important; }
+.bore-modal .export-modal-body { min-height: 290px; }
+.bore-modal .export-modal-settings { width: 290px; }
+
+.bore-preview-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 20px; padding: 20px;
+}
+.bore-preview-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.bore-preview-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  color: var(--text-muted); text-align: center;
+}
+.bore-preview-divider { width: 1px; align-self: stretch; background: var(--border); }
+
+.bore-sub-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--red);
+  padding-bottom: 2px;
+}
+
+.bore-same-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; border-radius: 8px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  cursor: pointer; user-select: none;
+  transition: border-color 0.14s;
+}
+.bore-same-row:hover { border-color: var(--red); }
+
+.bore-toggle-track {
+  width: 34px; height: 20px; border-radius: 10px;
+  background: var(--border); position: relative; flex-shrink: 0;
+  transition: background 0.2s;
+}
+.bore-toggle-track.on { background: var(--red); }
+.bore-toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: left 0.18s ease;
+}
+.bore-toggle-track.on .bore-toggle-thumb { left: 17px; }
+.bore-same-label { font-size: 12px; color: var(--text); font-weight: 500; }
+
+/* Bore type icon grid (4 cards in BoreEditModal) */
+.bore-type-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+.bore-type-opt {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 10px 4px 8px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 9px; cursor: pointer;
+  transition: border-color 0.13s, background 0.13s;
+}
+.bore-type-opt:hover { border-color: var(--red); background: var(--red-soft); }
+.bore-type-opt.active { border-color: var(--red); background: var(--red-soft); }
+.bore-type-opt-label {
+  font-family: var(--font); font-size: 9.5px; font-weight: 500;
+  color: var(--text); text-align: center; white-space: nowrap;
+}
+.bore-type-opt.active .bore-type-opt-label { color: var(--red); font-weight: 600; }
+.bore-type-opt-none { opacity: 0.65; }
+.bore-type-opt-none.active { opacity: 1; }
+.bore-type-opt-none .bore-type-opt-label { color: var(--text-muted); font-style: italic; }
+.bore-type-opt-none.active .bore-type-opt-label { color: var(--red); font-style: normal; }
+
+.bore-actions { display: flex; gap: 8px; }
+.bore-btn-reset {
+  flex: 1; height: 38px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 10px; cursor: pointer;
+  font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text);
+  transition: border-color 0.14s;
+}
+.bore-btn-reset:hover { border-color: var(--text); }
+.bore-btn-apply { flex: 2; height: 38px; margin-top: 0 !important; }
+
 /* ===== Responsive ===== */
 @media (max-width: 1100px) {
   .view-toggle { right: 18px; }

@@ -55,6 +55,7 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa, viewMode }: Props) 
   const scRef     = useRef(1);
   const boundRef  = useRef(3.5);
   const targetRef = useRef(viewMode === '3d' ? 1 : 0);
+  const zoomRef   = useRef(1.0);
 
   function rebuildGears(THREE: TM) {
     const group  = groupRef.current;
@@ -146,9 +147,14 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa, viewMode }: Props) 
         rotX += (e.clientY - ly) * 0.01; ly = e.clientY;
         rotX = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, rotX));
       };
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        zoomRef.current = Math.max(0.2, Math.min(5.0, zoomRef.current * (e.deltaY > 0 ? 0.9 : 1.1)));
+      };
       canvas.addEventListener('pointerdown', onDown);
       canvas.addEventListener('pointerup',   onUp);
       canvas.addEventListener('pointermove', onMove);
+      canvas.addEventListener('wheel', onWheel, { passive: false });
 
       const ro = new ResizeObserver(() => {
         const cw = canvas.clientWidth, ch = canvas.clientHeight;
@@ -181,7 +187,8 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa, viewMode }: Props) 
         const sb = boundRef.current;
         const fd = sb / Math.tan((FRONT_FOV / 2) * DEG2RAD) * 1.1;
         const id = sb / Math.tan((ISO_FOV  / 2) * DEG2RAD) * 1.44;
-        camera.position.set(0, lerp(0, ISO_Y * id, p), lerp(fd, ISO_Z * id, p));
+        const zoom = zoomRef.current;
+        camera.position.set(0, lerp(0, ISO_Y * id, p) * zoom, lerp(fd, ISO_Z * id, p) * zoom);
         camera.fov = lerp(FRONT_FOV, ISO_FOV, p);
         camera.lookAt(0, 0, 0);
         camera.updateProjectionMatrix();
@@ -217,6 +224,7 @@ export default function GearCanvas3D({ g1, g2, moduleMm, pa, viewMode }: Props) 
         canvas.removeEventListener('pointerdown', onDown);
         canvas.removeEventListener('pointerup',   onUp);
         canvas.removeEventListener('pointermove', onMove);
+        canvas.removeEventListener('wheel', onWheel);
         ro.disconnect();
         cancelAnimationFrame(raf);
         oldGeoRef.current?.();

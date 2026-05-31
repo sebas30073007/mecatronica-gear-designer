@@ -120,6 +120,7 @@ export default function WormGearCanvas3D({ starts, wheelTeeth, moduleMm, pressur
   const spinRef     = useRef({ worm: 0, wheel: 0 });
   const ratioRef    = useRef({ z: wheelTeeth, s: starts });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const zoomRef     = useRef(1.0);
   const [isLoading, setIsLoading] = useState(false);
 
   function rebuildGears(THREE: TM) {
@@ -214,8 +215,13 @@ export default function WormGearCanvas3D({ starts, wheelTeeth, moduleMm, pressur
         rotX += (e.clientY - ly) * 0.01; ly = e.clientY;
         rotX = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, rotX));
       };
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        zoomRef.current = Math.max(0.2, Math.min(5.0, zoomRef.current * (e.deltaY > 0 ? 0.9 : 1.1)));
+      };
       canvas.addEventListener('pointerdown', onDown);
       canvas.addEventListener('pointerup',   onUp);
+      canvas.addEventListener('wheel', onWheel, { passive: false });
       canvas.addEventListener('pointermove', onMove);
 
       const ro = new ResizeObserver(() => {
@@ -232,7 +238,8 @@ export default function WormGearCanvas3D({ starts, wheelTeeth, moduleMm, pressur
         raf = requestAnimationFrame(tick);
         const sb      = boundRef.current;
         const camDist = sb / Math.tan((ISO_FOV / 2) * DEG2RAD) * 1.44;
-        camera.position.set(0, camDist * 0.82, camDist * 0.68);
+        const zoom = zoomRef.current;
+        camera.position.set(0, camDist * 0.82 * zoom, camDist * 0.68 * zoom);
         camera.lookAt(0, 0, 0);
         camera.updateProjectionMatrix();
 
@@ -251,6 +258,7 @@ export default function WormGearCanvas3D({ starts, wheelTeeth, moduleMm, pressur
       tick();
 
       dispose = () => {
+        canvas.removeEventListener('wheel', onWheel);
         canvas.removeEventListener('pointerdown', onDown);
         canvas.removeEventListener('pointerup',   onUp);
         canvas.removeEventListener('pointermove', onMove);

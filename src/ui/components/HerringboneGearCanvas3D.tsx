@@ -112,6 +112,7 @@ export default function HerringboneGearCanvas3D({
   const ratioRef   = useRef({ z1: outputTeeth, z2: inputTeeth });
   const spinRef    = useRef({ s1: 0, s2: 0 });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const zoomRef     = useRef(1.0);
   const [isLoading, setIsLoading] = useState(false);
 
   function rebuildGears(THREE: TM) {
@@ -187,8 +188,13 @@ export default function HerringboneGearCanvas3D({
         rotX += (e.clientY - ly) * 0.01; ly = e.clientY;
         rotX = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, rotX));
       };
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        zoomRef.current = Math.max(0.2, Math.min(5.0, zoomRef.current * (e.deltaY > 0 ? 0.9 : 1.1)));
+      };
       canvas.addEventListener('pointerdown', onDown);
       canvas.addEventListener('pointerup',   onUp);
+      canvas.addEventListener('wheel', onWheel, { passive: false });
       canvas.addEventListener('pointermove', onMove);
 
       const ro = new ResizeObserver(() => {
@@ -206,7 +212,8 @@ export default function HerringboneGearCanvas3D({
 
         const sb      = boundRef.current;
         const camDist = sb / Math.tan((ISO_FOV / 2) * DEG2RAD) * 1.44;
-        camera.position.set(0, ISO_Y * camDist, ISO_Z * camDist);
+        const zoom = zoomRef.current;
+        camera.position.set(0, ISO_Y * camDist * zoom, ISO_Z * camDist * zoom);
         camera.lookAt(0, 0, 0);
         camera.updateProjectionMatrix();
 
@@ -225,6 +232,7 @@ export default function HerringboneGearCanvas3D({
       tick();
 
       dispose = () => {
+        canvas.removeEventListener('wheel', onWheel);
         canvas.removeEventListener('pointerdown', onDown);
         canvas.removeEventListener('pointerup',   onUp);
         canvas.removeEventListener('pointermove', onMove);
