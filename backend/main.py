@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from gear_geometry import spur_gear_outline
+from gear_geometry import spur_gear_outline, rack_profile_2d
 
 app = FastAPI(title="Gear STEP API", version="1.0.0")
 
@@ -102,6 +102,92 @@ async def step_export_spur(req: SpurGearRequest):
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     filename = f"gear-{req.label}-{req.teeth}T-M{req.module_mm}.step"
+    return Response(
+        content=data,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+class RingGearRequest(BaseModel):
+    ring_teeth: int = Field(..., ge=20, le=400)
+    module_mm: float = Field(..., gt=0.3, le=50.0)
+    pressure_angle_deg: float = Field(20.0, ge=10.0, le=30.0)
+    thickness_mm: float = Field(..., gt=0.5, le=500.0)
+    wall_thickness_mm: float = Field(3.0, ge=0.5, le=50.0)
+    label: str = Field("ring-gear", max_length=64)
+
+
+def build_ring_gear_step(req: RingGearRequest) -> bytes:
+    # The ring gear is built by subtracting an external spur gear solid from a disk.
+    # The external spur gear's tooth profile forms the internal teeth of the ring.
+    gear_pts = spur_gear_outline(
+        teeth=req.ring_teeth,
+        module_mm=req.module_mm,
+        pressure_angle_deg=req.pressure_angle_deg,
+        quality=16,
+    )
+    # Outer radius sits just beyond the spur gear tip circle plus wall thickness
+    outer_r = req.module_mm * (req.ring_teeth + 2) / 2 + req.wall_thickness_mm
+    outer_disk = cq.Workplane("XY").circle(outer_r).extrude(req.thickness_mm)
+    gear_wp    = _build_solid(gear_pts, req.thickness_mm)
+    result     = outer_disk.cut(gear_wp)
+
+    with tempfile.NamedTemporaryFile(suffix=".step", delete=False) as f:
+        tmp = f.name
+    try:
+        cq.exporters.export(result, tmp)
+        with open(tmp, "rb") as f:
+            return f.read()
+    finally:
+        os.unlink(tmp)
+
+
+@app.post("/step-export/ring-gear")
+async def step_export_ring_gear(req: RingGearRequest):
+    try:
+        data = build_ring_gear_step(req)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    filename = f"gear-{req.label}-{req.ring_teeth}T-M{req.module_mm}.step"
+    return Response(
+        content=data,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+class RackRequest(BaseModel):
+    n_teeth: int = Field(..., ge=3, le=200)
+    module_mm: float = Field(..., gt=0.3, le=50.0)
+    pressure_angle_deg: float = Field(20.0, ge=10.0, le=30.0)
+    thickness_mm: float = Field(..., gt=0.5, le=500.0)
+    label: str = Field("rack", max_length=64)
+
+
+def build_rack_step(req: RackRequest) -> bytes:
+    pts    = rack_profile_2d(req.n_teeth, req.module_mm, req.pressure_angle_deg)
+    result = _build_solid(pts, req.thickness_mm)
+
+    with tempfile.NamedTemporaryFile(suffix=".step", delete=False) as f:
+        tmp = f.name
+    try:
+        cq.exporters.export(result, tmp)
+        with open(tmp, "rb") as f:
+            return f.read()
+    finally:
+        os.unlink(tmp)
+
+
+@app.post("/step-export/rack")
+async def step_export_rack(req: RackRequest):
+    try:
+        data = build_rack_step(req)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    filename = f"rack-{req.label}-{req.n_teeth}T-M{req.module_mm}.step"
     return Response(
         content=data,
         media_type="application/octet-stream",

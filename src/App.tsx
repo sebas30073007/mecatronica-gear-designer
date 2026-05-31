@@ -129,6 +129,7 @@ export default function App() {
         <ExportModal
           g1={g1} g2={g2} moduleMm={moduleMm} pa={pa}
           is3d={is3d} activeMode={activeMode}
+          rackPinion={rackPinion} internalGear={internalGear} planetary={planetary}
           onClose={() => setShowExport(false)}
         />
       )}

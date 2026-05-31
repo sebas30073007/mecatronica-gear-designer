@@ -98,3 +98,42 @@ def spur_gear_outline(
         all_pts.extend(arc_points(root_r, arc_start, arc_end, 3))
 
     return all_pts
+
+
+def rack_profile_2d(
+    n_teeth: int,
+    module_mm: float,
+    pressure_angle_deg: float = 20.0,
+    body_height_mm: float = 0.0,
+) -> List[Point2D]:
+    """2D cross-section of a rack (XY plane), teeth pointing +Y.
+    Origin at pitch-line centre. Polygon is CW so the extruded face is correct.
+    """
+    pa       = math.radians(pressure_angle_deg)
+    pitch    = math.pi * module_mm
+    addendum = module_mm
+    dedendum = 1.25 * module_mm
+    if body_height_mm <= 0:
+        body_height_mm = 2.0 * module_mm
+
+    half_len = n_teeth * pitch / 2
+    tan_pa   = math.tan(pa)
+
+    pts: List[Point2D] = []
+    pts.append((-half_len, -(dedendum + body_height_mm)))
+    pts.append(( half_len, -(dedendum + body_height_mm)))
+    pts.append(( half_len, -dedendum))
+
+    for i in range(n_teeth - 1, -1, -1):
+        xc  = (i + 0.5 - n_teeth / 2) * pitch
+        x_rr = xc + pitch / 4 + dedendum * tan_pa
+        x_rt = xc + pitch / 4 - addendum * tan_pa
+        x_lt = xc - pitch / 4 + addendum * tan_pa
+        x_lr = xc - pitch / 4 - dedendum * tan_pa
+        pts.append((x_rr, -dedendum))
+        pts.append((x_rt,  addendum))
+        pts.append((x_lt,  addendum))
+        pts.append((x_lr, -dedendum))
+
+    pts.append((-half_len, -dedendum))
+    return pts

@@ -35,7 +35,8 @@
       "Bash(git stash *)",
       "WebSearch",
       "WebFetch(domain:replicad.xyz)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(python -c \"import ast, pathlib; [ast.parse\\(p.read_text\\(\\)\\) for p in pathlib.Path\\('.'\\).glob\\('*.py'\\)]; print\\('OK'\\)\")"
     ]
   }
 }

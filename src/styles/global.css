@@ -857,10 +857,21 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
   border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;
   font-family: var(--font); font-size: 14px; font-weight: 600;
   box-shadow: 0 4px 12px -2px rgba(230,0,35,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
-  transition: all 0.16s ease;
+  transition: background 0.16s ease, transform 0.16s ease;
+  position: relative; overflow: hidden;
 }
-.export-modal-btn:hover { background: var(--red-deep); transform: translateY(-1px); }
-.export-modal-btn:active { transform: translateY(0); }
+.export-modal-btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  width: var(--btn-progress, 0%);
+  background: rgba(255,255,255,0.22);
+  border-radius: inherit;
+  transition: width 0.12s linear;
+  pointer-events: none;
+}
+.export-modal-btn:not(:disabled):hover { background: var(--red-deep); transform: translateY(-1px); }
+.export-modal-btn:not(:disabled):active { transform: translateY(0); }
+.export-modal-btn:disabled { cursor: wait; }
 .export-modal-btn svg { width: 16px; height: 16px; stroke-width: 2.5; }
 
 /* ===== Responsive ===== */

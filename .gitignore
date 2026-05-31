@@ -1,3 +1,7 @@
+# Local env (never commit — contains API URLs and secrets)
+.env.local
+.env.*.local
+
 # Logs
 logs
 *.log
