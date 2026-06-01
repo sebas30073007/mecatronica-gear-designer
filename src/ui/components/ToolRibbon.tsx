@@ -1,9 +1,9 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import type {
   SpurGear, ActiveMode, UnitSystem, BoreType,
-  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams, WormParams,
+  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams, WormParams, BevelParams,
 } from '../../core/gearTypes';
-import { rackMinLength, internalGearValid, planetaryRingTeeth, planetarySpacingOk } from '../../core/gearTypes';
+import { rackMinLength, internalGearValid, planetaryRingTeeth, planetarySpacingOk, bevelConeLength } from '../../core/gearTypes';
 import type { ValidationWarning } from '../../core/validation';
 import { fmtModule } from '../../core/units';
 import TeethStepper from '../primitives/TeethStepper';
@@ -33,8 +33,11 @@ interface Props {
   onSetHerringbone:  (u: Partial<HelicalParams>) => void;
   worm: WormParams;
   onSetWorm:         (u: Partial<WormParams>) => void;
+  bevel: BevelParams;
+  onSetBevel:        (u: Partial<BevelParams>) => void;
   onSetFaceWidth:    (mm: number) => void;
   onSetBoreType:     (id: string, type: BoreType) => void;
+  onSetBoreDiameter: (id: string, mm: number) => void;
   onBoreEditClick:   () => void;
   onExportClick:     () => void;
 }
@@ -144,10 +147,10 @@ function FaceSlider({ value, unitSystem, onChange, min = 3 }: {
 
 export default function ToolRibbon({
   g1, g2, moduleMm, pa, unitSystem, activeMode, warnings, is3d,
-  faceWidthMm, rackPinion, internalGear, planetary, helical, herringbone, worm,
+  faceWidthMm, rackPinion, internalGear, planetary, helical, herringbone, worm, bevel,
   onSetTeeth, onSetModule, onSetPressureAngle, onSetUnitSystem, onSetActiveMode,
-  onSetRackPinion, onSetInternalGear, onSetPlanetary, onSetHelical, onSetHerringbone, onSetWorm, onSetFaceWidth,
-  onSetBoreType, onBoreEditClick,
+  onSetRackPinion, onSetInternalGear, onSetPlanetary, onSetHelical, onSetHerringbone, onSetWorm, onSetBevel, onSetFaceWidth,
+  onSetBoreType, onSetBoreDiameter, onBoreEditClick,
   onExportClick,
 }: Props) {
   const showFaceSlider = is3d;
@@ -197,7 +200,9 @@ export default function ToolRibbon({
             <BoreTypeSelector
               g1BoreType={g1.boreType}
               g2BoreType={g2.boreType}
+              boreDiameterMm={g1.boreDiameterMm}
               onChange={type => { onSetBoreType(g1.id, type); onSetBoreType(g2.id, type); }}
+              onChangeDiameter={mm => { onSetBoreDiameter(g1.id, mm); onSetBoreDiameter(g2.id, mm); }}
               onEditClick={onBoreEditClick}
             />
           </div>
@@ -400,8 +405,46 @@ export default function ToolRibbon({
         </Grp>
       </>}
 
-      {/* ── Face Width slider (3D only, non-simple modes) ─ */}
-      {showFaceSlider && activeMode !== 'simple' && <>
+      {/* ── Bevel (Conic) Gear ───────────────────────── */}
+      {activeMode === 'bevel' && (() => {
+        const L = bevelConeLength(bevel);
+        const bMax = Math.floor(L / 3);
+        return (
+          <>
+            <Grp label="Teeth">
+              <TeethStepper label="Pinion" value={bevel.pinionTeeth} min={8}  max={30}
+                onChange={v => onSetBevel({ pinionTeeth: v })} />
+              <TeethStepper label="Gear"   value={bevel.gearTeeth}   min={12} max={80}
+                onChange={v => onSetBevel({ gearTeeth: v })} />
+            </Grp>
+            <RDiv />
+            <Grp label="Module">
+              <ModSel value={bevel.moduleMm} onChange={v => onSetBevel({ moduleMm: v })} />
+            </Grp>
+            <RDiv />
+            <Grp label="Tooth Profile">
+              <PAStepper value={bevel.pressureAngleDeg} onChange={v => onSetBevel({ pressureAngleDeg: v })} />
+            </Grp>
+            <RDiv />
+            <Grp label="Face Width">
+              <div className="rbn-face-slider">
+                <input type="range" min={3} max={Math.max(bMax, 4)} step={1}
+                  value={Math.min(bevel.faceWidthMm, bMax)}
+                  onChange={e => onSetBevel({ faceWidthMm: parseInt(e.target.value) })} />
+                <span className="rbn-face-val">{bevel.faceWidthMm} mm</span>
+              </div>
+              {bevel.faceWidthMm > bMax && (
+                <p style={{ fontSize: 10, color: 'var(--red)', margin: '2px 0 0' }}>
+                  Recomendado: ≤ {bMax} mm
+                </p>
+              )}
+            </Grp>
+          </>
+        );
+      })()}
+
+      {/* ── Face Width slider (3D only, non-simple modes except bevel) ─ */}
+      {showFaceSlider && activeMode !== 'simple' && activeMode !== 'bevel' && <>
         <RDiv />
         <Grp label="Face Width">
           <FaceSlider

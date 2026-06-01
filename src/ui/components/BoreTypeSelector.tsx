@@ -12,7 +12,6 @@ const BORE_IMG: Record<Exclude<BoreType, 'none'>, string> = {
   'round':   RoundImg,
 };
 
-// Exported: used in BoreEditModal preview and type buttons
 export function BoreIcon({ type, size = 36 }: { type: BoreType; size?: number }) {
   if (type === 'none') {
     const r = Math.max(1, size * 0.045);
@@ -32,7 +31,6 @@ export function BoreIcon({ type, size = 36 }: { type: BoreType; size?: number })
   );
 }
 
-// Inverted order: Keyway → D-Shaft → Round → None
 const CATALOG: { value: BoreType; label: string }[] = [
   { value: 'keyway',  label: 'Keyway'  },
   { value: 'd-shaft', label: 'D-Shaft' },
@@ -43,23 +41,40 @@ const CATALOG: { value: BoreType; label: string }[] = [
 const BORE_TYPES = CATALOG.filter(o => o.value !== 'none');
 
 interface Props {
-  g1BoreType:  BoreType;
-  g2BoreType:  BoreType;
-  onChange:    (type: BoreType) => void;
-  onEditClick: () => void;
+  g1BoreType:       BoreType;
+  g2BoreType:       BoreType;
+  boreDiameterMm:   number;
+  onChange:         (type: BoreType) => void;
+  onChangeDiameter: (mm: number) => void;
+  onEditClick:      () => void;
 }
 
-export default function BoreTypeSelector({ g1BoreType, g2BoreType, onChange, onEditClick }: Props) {
+export default function BoreTypeSelector({
+  g1BoreType, g2BoreType, boreDiameterMm,
+  onChange, onChangeDiameter, onEditClick,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [pos, setPos]   = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropRef    = useRef<HTMLDivElement>(null);
+
+  // Deferred diameter input — types freely, clamps on blur/Enter
+  const [rawDiam, setRawDiam] = useState(String(boreDiameterMm));
+  useEffect(() => { setRawDiam(String(boreDiameterMm)); }, [boreDiameterMm]);
+  const commitDiam = () => {
+    const v = parseFloat(rawDiam);
+    if (isNaN(v)) { setRawDiam(String(boreDiameterMm)); return; }
+    const c = Math.max(2, Math.min(50, v));
+    setRawDiam(String(c));
+    onChangeDiameter(c);
+  };
 
   const same         = g1BoreType === g2BoreType;
   const displayType  = same ? g1BoreType : 'none';
   const displayLabel = same
     ? (CATALOG.find(o => o.value === g1BoreType)?.label ?? 'None')
     : 'Mixed';
+  const showDiam = g1BoreType !== 'none' || g2BoreType !== 'none';
 
   useLayoutEffect(() => {
     if (open && triggerRef.current) {
@@ -84,7 +99,6 @@ export default function BoreTypeSelector({ g1BoreType, g2BoreType, onChange, onE
     <div ref={dropRef} className="bts-dropdown"
       style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 190) }}>
 
-      {/* Keyway · D-Shaft · Round */}
       {BORE_TYPES.map(o => (
         <button key={o.value}
           className={`bts-option${isActive(o.value) ? ' active' : ''}`}
@@ -94,10 +108,8 @@ export default function BoreTypeSelector({ g1BoreType, g2BoreType, onChange, onE
         </button>
       ))}
 
-      {/* Separator before None */}
       <div className="bts-separator" />
 
-      {/* None — special */}
       <button
         className={`bts-option bts-option-none${isActive('none') ? ' active' : ''}`}
         onClick={() => { onChange('none'); setOpen(false); }}>
@@ -110,7 +122,7 @@ export default function BoreTypeSelector({ g1BoreType, g2BoreType, onChange, onE
 
   return (
     <div className="bts-wrap">
-      {/* ── Trigger (GTS-style grid) ── */}
+      {/* ── Type dropdown trigger ── */}
       <button ref={triggerRef} type="button"
         className={`bts-trigger${open ? ' open' : ''}`}
         onClick={() => setOpen(o => !o)}>
@@ -123,13 +135,38 @@ export default function BoreTypeSelector({ g1BoreType, g2BoreType, onChange, onE
         </svg>
       </button>
 
-      {/* ── Edit button (prominent, red accent) ── */}
-      <button type="button" className="bts-edit-btn" onClick={onEditClick} title="Edit bore settings">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
-          strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M11 2L14 5L6 13H3V10L11 2Z"/>
+      {/* ── Quick diameter input ── */}
+      {showDiam && (
+        <div className="bts-diam-wrap">
+          <input
+            type="number" className="bts-diam-input"
+            min={2} max={50} step={0.5} value={rawDiam}
+            onChange={e => setRawDiam(e.target.value)}
+            onBlur={commitDiam}
+            onKeyDown={e => { if (e.key === 'Enter') { commitDiam(); (e.target as HTMLInputElement).blur(); } }}
+            title="Bore diameter (both gears)"
+          />
+          <span className="bts-diam-unit">mm</span>
+        </div>
+      )}
+
+      {/* ── Advanced button ── */}
+      <button type="button" className="bts-edit-btn" onClick={onEditClick}
+        title="Configuración avanzada — diámetros y tipos independientes por engrane">
+        {/* Sliders icon */}
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+          strokeWidth="1.5" strokeLinecap="round">
+          <line x1="2" y1="4"  x2="9.5"  y2="4"/>
+          <line x1="11.5" y1="4"  x2="14" y2="4"/>
+          <circle cx="10.5" cy="4"  r="1.5" fill="currentColor" stroke="none"/>
+          <line x1="2" y1="8"  x2="5.5"  y2="8"/>
+          <line x1="7.5"  y1="8"  x2="14" y2="8"/>
+          <circle cx="6.5"  cy="8"  r="1.5" fill="currentColor" stroke="none"/>
+          <line x1="2" y1="12" x2="11.5" y2="12"/>
+          <line x1="13.5" y1="12" x2="14" y2="12"/>
+          <circle cx="12.5" cy="12" r="1.5" fill="currentColor" stroke="none"/>
         </svg>
-        <span>Edit</span>
+        <span>Adv.</span>
       </button>
 
       {dropdown}

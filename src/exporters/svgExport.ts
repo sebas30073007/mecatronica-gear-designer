@@ -7,7 +7,8 @@ import { generateSpurGearOutline } from '../geometry/spurGear2D';
 import { generateBoreOutline } from '../geometry/borePath';
 import { pointsToSvgPath } from '../geometry/polar';
 import type { Point2D } from '../geometry/polar';
-import type { BoreType } from '../core/gearTypes';
+import type { BoreType, PlanetaryParams } from '../core/gearTypes';
+import { planetaryRingTeeth } from '../core/gearTypes';
 
 export interface GearExportParams {
   teeth: number;
@@ -215,5 +216,137 @@ ${centerMark(cx1, cy1)}
 ${centerMark(cx2, cy2)}
   </g>
 ${pairLabel}
+</svg>`;
+}
+
+// ─── Planetary gear set ───────────────────────────────────────────────────────
+
+function gearPathAt(outline: Point2D[], cx: number, cy: number, phaseRad = 0): string {
+  if (phaseRad === 0) return toAbsPath(outline, cx, cy);
+  const rotated = outline.map(p => {
+    const r = Math.hypot(p.x, p.y), a = Math.atan2(p.y, p.x) + phaseRad;
+    return { x: r * Math.cos(a), y: r * Math.sin(a) };
+  });
+  return toAbsPath(rotated, cx, cy);
+}
+
+/** Complete assembly view (combined) or individual component. */
+export function exportPlanetarySvg(params: PlanetaryParams, opts: SvgExportOptions = {}): string {
+  const { marginMm = 8, quality = 24, showConstruction = true,
+          showPitchCircle = true, showLabels = false } = opts;
+  const { sunTeeth, planetTeeth, planetCount, moduleMm, pressureAngleDeg } = params;
+  const ringTeeth = planetaryRingTeeth(params);
+  const r_sun     = sunTeeth    * moduleMm / 2;
+  const r_planet  = planetTeeth * moduleMm / 2;
+  const r_ring    = ringTeeth   * moduleMm / 2;
+  const orbit_r   = r_sun + r_planet;
+  const r_wall    = (ringTeeth + 2.5) * moduleMm / 2 + 3;  // outer wall of ring gear
+
+  const totalR = r_wall + marginMm;
+  const W = totalR * 2, H = totalR * 2;
+  const cx = totalR, cy = totalR;
+
+  const sunGeo  = generateSpurGearOutline({ teeth: sunTeeth,    moduleMm, pressureAngleDeg, quality });
+  const planGeo = generateSpurGearOutline({ teeth: planetTeeth, moduleMm, pressureAngleDeg, quality });
+  const ringGeo = generateSpurGearOutline({ teeth: ringTeeth,   moduleMm, pressureAngleDeg, quality });
+
+  const constructionCircles: Array<{cx:number;cy:number;r:number;color:string;dash:string}> = [];
+  const pitchCircles: Array<{cx:number;cy:number;r:number}> = [];
+  if (showConstruction) {
+    constructionCircles.push(
+      { cx, cy, r: sunGeo.rootRadius, color: '#0066cc', dash: '2 1' },
+      { cx, cy, r: sunGeo.baseRadius, color: '#009933', dash: '1 2' },
+      { cx, cy, r: r_wall, color: '#0066cc', dash: '2 1' },
+    );
+  }
+  if (showPitchCircle) {
+    pitchCircles.push({ cx, cy, r: r_sun }, { cx, cy, r: r_ring });
+  }
+
+  const planetPathElems: string[] = [];
+  for (let i = 0; i < planetCount; i++) {
+    const θ  = (i / planetCount) * Math.PI * 2 - Math.PI / 2;
+    const px = cx + orbit_r * Math.cos(θ);
+    const py = cy - orbit_r * Math.sin(θ);  // SVG Y-flip
+    const phase = Math.PI / planetTeeth + (θ + Math.PI);
+    planetPathElems.push(`<path id="planet-${i}" d="${gearPathAt(planGeo.outline, px, py, phase)}"/>`);
+    if (showConstruction) constructionCircles.push(
+      { cx: px, cy: py, r: planGeo.rootRadius, color: '#0066cc', dash: '2 1' },
+      { cx: px, cy: py, r: planGeo.baseRadius, color: '#009933', dash: '1 2' },
+    );
+    if (showPitchCircle) pitchCircles.push({ cx: px, cy: py, r: r_planet });
+  }
+
+  const date = new Date().toISOString().split('T')[0]!;
+  const labelText = showLabels
+    ? `  <g font-family="monospace" fill="#666666" font-size="3.5"><text x="${f(cx)}" y="${f(H-2)}" text-anchor="middle">Sun z=${sunTeeth}  Planet z=${planetTeeth}  Ring z=${ringTeeth}  m=${moduleMm}  ${planetCount}×</text></g>`
+    : '';
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${f(W)}mm" height="${f(H)}mm"
+     viewBox="0 0 ${f(W)} ${f(H)}">
+  <title>Planetary-Sun${sunTeeth}-Planet${planetTeeth}-Ring${ringTeeth}-M${moduleMm}</title>
+  <desc>Planetary | Sun z=${sunTeeth}, Planet z=${planetTeeth} (${planetCount}×), Ring z=${ringTeeth} | m=${moduleMm} | PA=${pressureAngleDeg}° | Generated: ${date}</desc>
+${constructionCircles.length ? constructionGroup(constructionCircles) : ''}
+${pitchCircles.length ? pitchGroup(pitchCircles) : ''}
+  <g id="layer-cut" fill="none" stroke="#000000" stroke-width="0.1" stroke-linejoin="round" stroke-linecap="round">
+    <path id="ring-outer" d="${circlePath(cx, cy, r_wall)}"/>
+    <path id="ring-inner" d="${toAbsPath(ringGeo.outline, cx, cy)}"/>
+    <path id="sun-gear"   d="${toAbsPath(sunGeo.outline,  cx, cy)}"/>
+    ${planetPathElems.join('\n    ')}
+  </g>
+  <g id="center-mark" stroke="#cc0000" stroke-width="0.15" opacity="0.5">${centerMark(cx, cy)}</g>
+${labelText}
+</svg>`;
+}
+
+/** Sun gear only — uses standard single-gear format. */
+export function exportSunGearSvg(p: PlanetaryParams, opts: SvgExportOptions = {}): string {
+  return exportSingleGearSvg({
+    teeth: p.sunTeeth, moduleMm: p.moduleMm, pressureAngleDeg: p.pressureAngleDeg,
+    boreDiameterMm: Math.max(4, p.moduleMm * 2), boreType: 'round',
+    label: `Sun-${p.sunTeeth}T-M${p.moduleMm}`,
+  }, opts);
+}
+
+/** One planet gear — uses standard single-gear format. */
+export function exportPlanetGearSvg(p: PlanetaryParams, opts: SvgExportOptions = {}): string {
+  return exportSingleGearSvg({
+    teeth: p.planetTeeth, moduleMm: p.moduleMm, pressureAngleDeg: p.pressureAngleDeg,
+    boreDiameterMm: Math.max(3, p.moduleMm * 1.5), boreType: 'round',
+    label: `Planet-${p.planetTeeth}T-M${p.moduleMm}`,
+  }, opts);
+}
+
+/** Ring gear only — outer wall circle + inner spur profile (the internal teeth). */
+export function exportRingGearSvg(p: PlanetaryParams, opts: SvgExportOptions = {}): string {
+  const { marginMm = 8, quality = 24, showConstruction = true, showPitchCircle = true } = opts;
+  const ringTeeth = planetaryRingTeeth(p);
+  const ringGeo   = generateSpurGearOutline({ teeth: ringTeeth, moduleMm: p.moduleMm, pressureAngleDeg: p.pressureAngleDeg, quality });
+  const r_wall    = (ringTeeth + 2.5) * p.moduleMm / 2 + 3;
+  const totalR = r_wall + marginMm;
+  const W = totalR * 2, H = totalR * 2;
+  const cx = totalR, cy = totalR;
+  const date = new Date().toISOString().split('T')[0]!;
+
+  const construction = showConstruction ? constructionGroup([
+    { cx, cy, r: r_wall, color: '#0066cc', dash: '2 1' },
+  ]) : '';
+  const pitch = showPitchCircle ? pitchGroup([{ cx, cy, r: ringTeeth * p.moduleMm / 2 }]) : '';
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${f(W)}mm" height="${f(H)}mm"
+     viewBox="0 0 ${f(W)} ${f(H)}">
+  <title>Ring-Gear-${ringTeeth}T-M${p.moduleMm}</title>
+  <desc>Internal Ring Gear | z=${ringTeeth} | m=${p.moduleMm} | PA=${p.pressureAngleDeg}° | Outer Ø ${f(r_wall*2)} mm | Generated: ${date}</desc>
+${construction}
+${pitch}
+  <g id="layer-cut" fill="none" stroke="#000000" stroke-width="0.1" stroke-linejoin="round" stroke-linecap="round">
+    <path id="ring-outer" d="${circlePath(cx, cy, r_wall)}"/>
+    <path id="ring-inner" d="${toAbsPath(ringGeo.outline, cx, cy)}"/>
+  </g>
+  <g id="center-mark" stroke="#cc0000" stroke-width="0.15" opacity="0.5">${centerMark(cx, cy)}</g>
 </svg>`;
 }

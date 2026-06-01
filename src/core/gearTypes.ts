@@ -185,6 +185,24 @@ export const planetaryRingTeeth = (p: PlanetaryParams) =>
 export const planetarySpacingOk = (p: PlanetaryParams) =>
   (p.sunTeeth + planetaryRingTeeth(p)) % p.planetCount === 0;
 
+// ── Bevel Gear parameters ─────────────────────────────────────────────────────
+
+export interface BevelParams {
+  pinionTeeth:      number;   // 8–30  (driving gear, smaller)
+  gearTeeth:        number;   // 12–80 (driven gear, larger)
+  moduleMm:         number;   // 1.0–3.0
+  pressureAngleDeg: number;   // 20°
+  faceWidthMm:      number;   // 4–25 mm (≤ cone length / 3 recommended)
+}
+
+/** Pitch cone half-angle for the pinion (90° shaft angle) */
+export const bevelPinionAngle = (p: BevelParams) =>
+  Math.atan(p.pinionTeeth / p.gearTeeth) * (180 / Math.PI);
+
+/** Shared pitch cone slant length */
+export const bevelConeLength = (p: BevelParams) =>
+  (p.moduleMm / 2) * Math.sqrt(p.pinionTeeth ** 2 + p.gearTeeth ** 2);
+
 export type GearTypeStatus = 'ready' | 'beta' | 'coming-soon' | 'later';
 
 export interface GearTypeEntry {

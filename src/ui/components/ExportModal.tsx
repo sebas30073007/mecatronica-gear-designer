@@ -2,14 +2,24 @@ import { useState, useEffect, useRef } from 'react';
 import type {
   SpurGear, ActiveMode,
   RackPinionParams, InternalGearParams, PlanetaryParams,
+  HelicalParams, WormParams, BevelParams,
 } from '../../core/gearTypes';
 import { planetaryRingTeeth } from '../../core/gearTypes';
-import { exportSingleGearSvg, exportGearPairSvg } from '../../exporters/svgExport';
-import { exportSingleGearDxf, exportGearPairDxf } from '../../exporters/dxfExport';
-import { exportGearStl, exportGearObj } from '../../exporters/meshExport';
+import {
+  exportSingleGearSvg, exportGearPairSvg,
+  exportPlanetarySvg, exportSunGearSvg, exportPlanetGearSvg, exportRingGearSvg,
+} from '../../exporters/svgExport';
+import {
+  exportSingleGearDxf, exportGearPairDxf,
+  exportPlanetaryDxf, exportSunGearDxf, exportPlanetGearDxf, exportRingGearDxf,
+} from '../../exporters/dxfExport';
+import {
+  exportGearStl, exportGearObj,
+  exportRingGearStl, exportRingGearObj,
+} from '../../exporters/meshExport';
 import { downloadSvg, downloadDxf, downloadStl, downloadObj } from '../../exporters/download';
 import {
-  exportSpurGearStep, exportRingGearStep, exportRackStep,
+  exportSpurGearStep, exportRingGearStep, exportRackStep, exportBevelGearStep,
 } from '../../exporters/stepExport';
 import { KerfDetailView } from './KerfDetailView';
 import StaticGearPreview from './StaticGearPreview';
@@ -17,8 +27,9 @@ import StaticGearPreview from './StaticGearPreview';
 type Bundle = 'separate' | 'combined';
 type Format = 'svg' | 'dxf' | 'stl' | 'obj' | 'step';
 
+// All modes that have a live Three.js canvas in the DOM
 const CANVAS_MODES: ActiveMode[] = [
-  'simple', 'rack-pinion', 'internal', 'planetary', 'helical', 'herringbone', 'worm',
+  'simple', 'rack-pinion', 'internal', 'planetary', 'helical', 'herringbone', 'worm', 'bevel',
 ];
 
 const MODE_LABELS: Record<ActiveMode, string> = {
@@ -43,6 +54,10 @@ interface Props {
   rackPinion: RackPinionParams;
   internalGear: InternalGearParams;
   planetary: PlanetaryParams;
+  helical: HelicalParams;
+  herringbone: HelicalParams;
+  worm: WormParams;
+  bevel: BevelParams;
   onClose: () => void;
 }
 
@@ -61,6 +76,7 @@ const isSimple2D = (mode: ActiveMode, is3d: boolean) => mode === 'simple' && !is
 export default function ExportModal({
   g1, g2, moduleMm, pa, is3d, activeMode,
   rackPinion, internalGear, planetary,
+  helical, herringbone, worm, bevel,
   onClose,
 }: Props) {
   const [bundle,    setBundle]    = useState<Bundle>('separate');
@@ -253,6 +269,50 @@ export default function ExportModal({
             break;
           }
 
+          case 'helical':
+          case 'herringbone': {
+            const h = activeMode === 'helical' ? helical : herringbone;
+            await exportSpurGearStep({
+              teeth: h.outputTeeth, module_mm: h.moduleMm, pressure_angle_deg: h.pressureAngleDeg,
+              thickness_mm: h.thicknessMm, bore_mm: null, bore_type: 'none',
+              label: `${activeMode}-output-${h.outputTeeth}T`,
+            });
+            if (bundle === 'separate') {
+              await exportSpurGearStep({
+                teeth: h.inputTeeth, module_mm: h.moduleMm, pressure_angle_deg: h.pressureAngleDeg,
+                thickness_mm: h.thicknessMm, bore_mm: null, bore_type: 'none',
+                label: `${activeMode}-input-${h.inputTeeth}T`,
+              });
+            }
+            break;
+          }
+
+          case 'worm':
+            await exportSpurGearStep({
+              teeth: worm.wheelTeeth, module_mm: worm.moduleMm,
+              pressure_angle_deg: worm.pressureAngleDeg,
+              thickness_mm: worm.thicknessMm, bore_mm: null, bore_type: 'none',
+              label: `worm-wheel-${worm.wheelTeeth}T`,
+            });
+            break;
+
+          case 'bevel':
+            await exportBevelGearStep({
+              teeth: bevel.pinionTeeth, partner_teeth: bevel.gearTeeth,
+              module_mm: bevel.moduleMm, pressure_angle_deg: bevel.pressureAngleDeg,
+              face_width_mm: bevel.faceWidthMm, bore_mm: null,
+              label: `bevel-pinion-${bevel.pinionTeeth}T`,
+            });
+            if (bundle === 'separate') {
+              await exportBevelGearStep({
+                teeth: bevel.gearTeeth, partner_teeth: bevel.pinionTeeth,
+                module_mm: bevel.moduleMm, pressure_angle_deg: bevel.pressureAngleDeg,
+                face_width_mm: bevel.faceWidthMm, bore_mm: null,
+                label: `bevel-gear-${bevel.gearTeeth}T`,
+              });
+            }
+            break;
+
           default:
             await exportSpurGearStep({
               teeth: g1.teeth, module_mm: m, pressure_angle_deg: pa,
@@ -281,33 +341,129 @@ export default function ExportModal({
     // Sync formats — animate fill, then trigger downloads
     await animateFill(480);
 
+    // Default bore for modes without bore settings stored
+    const defaultBore = (mod: number) => Math.max(4, mod * 2);
+
     if (format === 'svg') {
-      if (bundle === 'separate') {
-        downloadSvg(exportSingleGearSvg(p1, opts), f1('svg'));
-        downloadSvg(exportSingleGearSvg(p2, opts), f2('svg'));
+      if (activeMode === 'planetary') {
+        if (bundle === 'separate') {
+          const pl = planetary;
+          downloadSvg(exportSunGearSvg(pl, opts),    `sun-${pl.sunTeeth}T-M${pl.moduleMm}.svg`);
+          downloadSvg(exportPlanetGearSvg(pl, opts), `planet-${pl.planetTeeth}T-M${pl.moduleMm}.svg`);
+          downloadSvg(exportRingGearSvg(pl, opts),   `ring-${planetaryRingTeeth(pl)}T-M${pl.moduleMm}.svg`);
+        } else {
+          downloadSvg(exportPlanetarySvg(planetary, opts), `planetary-${planetary.sunTeeth}T-M${planetary.moduleMm}.svg`);
+        }
       } else {
-        downloadSvg(exportGearPairSvg(p1, p2, opts), fp('svg'));
+        if (bundle === 'separate') {
+          downloadSvg(exportSingleGearSvg(p1, opts), f1('svg'));
+          downloadSvg(exportSingleGearSvg(p2, opts), f2('svg'));
+        } else {
+          downloadSvg(exportGearPairSvg(p1, p2, opts), fp('svg'));
+        }
       }
+
     } else if (format === 'dxf') {
-      if (bundle === 'separate') {
-        downloadDxf(exportSingleGearDxf(p1, opts), f1('dxf'));
-        downloadDxf(exportSingleGearDxf(p2, opts), f2('dxf'));
+      if (activeMode === 'planetary') {
+        if (bundle === 'separate') {
+          const pl = planetary;
+          downloadDxf(exportSunGearDxf(pl, opts),    `sun-${pl.sunTeeth}T-M${pl.moduleMm}.dxf`);
+          downloadDxf(exportPlanetGearDxf(pl, opts), `planet-${pl.planetTeeth}T-M${pl.moduleMm}.dxf`);
+          downloadDxf(exportRingGearDxf(pl, opts),   `ring-${planetaryRingTeeth(pl)}T-M${pl.moduleMm}.dxf`);
+        } else {
+          downloadDxf(exportPlanetaryDxf(planetary, opts), `planetary-${planetary.sunTeeth}T-M${planetary.moduleMm}.dxf`);
+        }
       } else {
-        downloadDxf(exportGearPairDxf(p1, p2, opts), fp('dxf'));
+        if (bundle === 'separate') {
+          downloadDxf(exportSingleGearDxf(p1, opts), f1('dxf'));
+          downloadDxf(exportSingleGearDxf(p2, opts), f2('dxf'));
+        } else {
+          downloadDxf(exportGearPairDxf(p1, p2, opts), fp('dxf'));
+        }
       }
+
     } else if (format === 'stl') {
-      if (bundle === 'separate') {
-        downloadStl(exportGearStl(mesh1, 'Output-Gear'), f1('stl'));
-        downloadStl(exportGearStl(mesh2, 'Input-Gear'),  f2('stl'));
-      } else {
-        downloadStl(exportGearStl(mesh1, 'Output-Gear'), fp('stl'));
+      const stl = (p: Parameters<typeof exportGearStl>[0], name: string, file: string) =>
+        downloadStl(exportGearStl(p, name), file);
+      switch (activeMode) {
+        case 'planetary': {
+          const pl = planetary; const rt = planetaryRingTeeth(pl); const bore = defaultBore(pl.moduleMm);
+          const gp = { moduleMm: pl.moduleMm, pressureAngleDeg: pl.pressureAngleDeg, thicknessMm: pl.thicknessMm, boreDiameterMm: bore };
+          stl({ teeth: pl.sunTeeth, ...gp }, 'Sun', `sun-${pl.sunTeeth}T-M${pl.moduleMm}.stl`);
+          if (bundle === 'separate') {
+            stl({ teeth: pl.planetTeeth, ...gp }, 'Planet', `planet-${pl.planetTeeth}T-M${pl.moduleMm}.stl`);
+            downloadStl(exportRingGearStl({ ringTeeth: rt, moduleMm: pl.moduleMm, thicknessMm: pl.thicknessMm }, 'Ring'), `ring-${rt}T-M${pl.moduleMm}.stl`);
+          }
+          break;
+        }
+        case 'helical': case 'herringbone': {
+          const h = activeMode === 'helical' ? helical : herringbone; const bore = defaultBore(h.moduleMm);
+          const gp = { moduleMm: h.moduleMm, pressureAngleDeg: h.pressureAngleDeg, thicknessMm: h.thicknessMm, boreDiameterMm: bore };
+          stl({ teeth: h.outputTeeth, ...gp }, 'Output', `${activeMode}-output-${h.outputTeeth}T-M${h.moduleMm}.stl`);
+          if (bundle === 'separate') stl({ teeth: h.inputTeeth, ...gp }, 'Input', `${activeMode}-input-${h.inputTeeth}T-M${h.moduleMm}.stl`);
+          break;
+        }
+        case 'worm': {
+          const bore = defaultBore(worm.moduleMm);
+          stl({ teeth: worm.wheelTeeth, moduleMm: worm.moduleMm, pressureAngleDeg: worm.pressureAngleDeg, thicknessMm: worm.thicknessMm, boreDiameterMm: bore }, 'Wheel', `worm-wheel-${worm.wheelTeeth}T-M${worm.moduleMm}.stl`);
+          break;
+        }
+        case 'bevel': {
+          const bore = defaultBore(bevel.moduleMm);
+          const gp = { moduleMm: bevel.moduleMm, pressureAngleDeg: bevel.pressureAngleDeg, thicknessMm: bevel.faceWidthMm, boreDiameterMm: bore };
+          stl({ teeth: bevel.pinionTeeth, ...gp }, 'Pinion', `bevel-pinion-${bevel.pinionTeeth}T-M${bevel.moduleMm}.stl`);
+          if (bundle === 'separate') stl({ teeth: bevel.gearTeeth, ...gp }, 'Gear', `bevel-gear-${bevel.gearTeeth}T-M${bevel.moduleMm}.stl`);
+          break;
+        }
+        default:
+          if (bundle === 'separate') {
+            downloadStl(exportGearStl(mesh1, 'Output-Gear'), f1('stl'));
+            downloadStl(exportGearStl(mesh2, 'Input-Gear'),  f2('stl'));
+          } else {
+            downloadStl(exportGearStl(mesh1, 'Output-Gear'), fp('stl'));
+          }
       }
+
     } else if (format === 'obj') {
-      if (bundle === 'separate') {
-        downloadObj(exportGearObj(mesh1, 'Output-Gear'), f1('obj'));
-        downloadObj(exportGearObj(mesh2, 'Input-Gear'),  f2('obj'));
-      } else {
-        downloadObj(exportGearObj(mesh1, 'Output-Gear'), fp('obj'));
+      const obj = (p: Parameters<typeof exportGearObj>[0], name: string, file: string) =>
+        downloadObj(exportGearObj(p, name), file);
+      switch (activeMode) {
+        case 'planetary': {
+          const pl = planetary; const rt = planetaryRingTeeth(pl); const bore = defaultBore(pl.moduleMm);
+          const gp = { moduleMm: pl.moduleMm, pressureAngleDeg: pl.pressureAngleDeg, thicknessMm: pl.thicknessMm, boreDiameterMm: bore };
+          obj({ teeth: pl.sunTeeth, ...gp }, 'Sun', `sun-${pl.sunTeeth}T-M${pl.moduleMm}.obj`);
+          if (bundle === 'separate') {
+            obj({ teeth: pl.planetTeeth, ...gp }, 'Planet', `planet-${pl.planetTeeth}T-M${pl.moduleMm}.obj`);
+            downloadObj(exportRingGearObj({ ringTeeth: rt, moduleMm: pl.moduleMm, thicknessMm: pl.thicknessMm }, 'Ring'), `ring-${rt}T-M${pl.moduleMm}.obj`);
+          }
+          break;
+        }
+        case 'helical': case 'herringbone': {
+          const h = activeMode === 'helical' ? helical : herringbone; const bore = defaultBore(h.moduleMm);
+          const gp = { moduleMm: h.moduleMm, pressureAngleDeg: h.pressureAngleDeg, thicknessMm: h.thicknessMm, boreDiameterMm: bore };
+          obj({ teeth: h.outputTeeth, ...gp }, 'Output', `${activeMode}-output-${h.outputTeeth}T-M${h.moduleMm}.obj`);
+          if (bundle === 'separate') obj({ teeth: h.inputTeeth, ...gp }, 'Input', `${activeMode}-input-${h.inputTeeth}T-M${h.moduleMm}.obj`);
+          break;
+        }
+        case 'worm': {
+          const bore = defaultBore(worm.moduleMm);
+          obj({ teeth: worm.wheelTeeth, moduleMm: worm.moduleMm, pressureAngleDeg: worm.pressureAngleDeg, thicknessMm: worm.thicknessMm, boreDiameterMm: bore }, 'Wheel', `worm-wheel-${worm.wheelTeeth}T-M${worm.moduleMm}.obj`);
+          break;
+        }
+        case 'bevel': {
+          const bore = defaultBore(bevel.moduleMm);
+          const gp = { moduleMm: bevel.moduleMm, pressureAngleDeg: bevel.pressureAngleDeg, thicknessMm: bevel.faceWidthMm, boreDiameterMm: bore };
+          obj({ teeth: bevel.pinionTeeth, ...gp }, 'Pinion', `bevel-pinion-${bevel.pinionTeeth}T-M${bevel.moduleMm}.obj`);
+          if (bundle === 'separate') obj({ teeth: bevel.gearTeeth, ...gp }, 'Gear', `bevel-gear-${bevel.gearTeeth}T-M${bevel.moduleMm}.obj`);
+          break;
+        }
+        default:
+          if (bundle === 'separate') {
+            downloadObj(exportGearObj(mesh1, 'Output-Gear'), f1('obj'));
+            downloadObj(exportGearObj(mesh2, 'Input-Gear'),  f2('obj'));
+          } else {
+            downloadObj(exportGearObj(mesh1, 'Output-Gear'), fp('obj'));
+          }
       }
     }
 

@@ -285,7 +285,7 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .rbn-spacer { flex: 1; min-width: 8px; }
 
 /* Ribbon override — compact controls to fit 80px height */
-.ribbon .stepper         { height: 34px; border-radius: 7px; grid-template-columns: 30px 1fr 30px; border-color: rgba(15,18,23,0.15); background: var(--white); }
+.ribbon .stepper         { height: 34px; border-radius: 7px; grid-template-columns: 30px 1fr 30px; border-color: rgba(15,18,23,0.15); background: var(--white); width: 104px; }
 .ribbon .stepper button  { color: var(--text); }
 .ribbon .mini-label      { font-size: 8.5px; margin-bottom: 2px; margin-top: 0; letter-spacing: 0.04em; color: #6b7585; font-weight: 600; }
 
@@ -878,7 +878,7 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .bts-wrap { display: flex; align-items: center; gap: 6px; }
 
 /* Ribbon wrapper: constrains width + uses GTS grid layout */
-.rbn-bore-wrap { width: 210px; }
+.rbn-bore-wrap { width: 310px; }
 .rbn-bore-wrap .bts-trigger {
   border-radius: 8px;
   display: grid;
@@ -909,7 +909,25 @@ select.text-input { appearance: none; -webkit-appearance: none; padding-right: 4
 .bts-caret { flex-shrink: 0; transition: transform 0.18s ease; color: var(--text-muted); }
 .bts-caret.open { transform: rotate(180deg); }
 
-/* Edit button — prominent red accent */
+/* Quick diameter input */
+.bts-diam-wrap { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+.bts-diam-input {
+  width: 84px; height: 28px;
+  border: 1.5px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--text-strong);
+  font-family: var(--font-mono); font-size: 12px;
+  text-align: center; padding: 0;
+  -moz-appearance: textfield;
+}
+.bts-diam-input::-webkit-inner-spin-button,
+.bts-diam-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.bts-diam-input:focus { border-color: var(--red); outline: none; box-shadow: 0 0 0 2px rgba(230,0,35,0.08); }
+.bts-diam-unit {
+  font-size: 10px; color: var(--text-muted);
+  font-family: var(--font-mono); white-space: nowrap;
+}
+
+/* Advanced button (was Edit) */
 .bts-edit-btn {
   display: flex; align-items: center; justify-content: center; gap: 5px;
   padding: 0 12px; height: 32px; flex-shrink: 0;

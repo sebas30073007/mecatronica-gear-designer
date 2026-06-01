@@ -79,7 +79,12 @@ function BorePreview({ type, label }: { type: BoreType; label: string }) {
 }
 
 export default function BoreEditModal({ g1, g2, onApply, onClose }: Props) {
-  const [sameForBoth, setSameForBoth] = useState(true);
+  // Start ON if both gears already have the same type+diameter (e.g. set via quick controls).
+  // Start OFF if they differ — Advanced mode is meant to configure each independently.
+  const [sameForBoth, setSameForBoth] = useState(
+    g1.boreType === g2.boreType &&
+    Math.abs((g1.boreDiameterMm ?? 8) - (g2.boreDiameterMm ?? 6)) < 0.1
+  );
   const [t1, setT1] = useState<BoreType>(g1.boreType);
   const [d1, setD1] = useState(g1.boreDiameterMm ?? 8);
   const [t2, setT2] = useState<BoreType>(g2.boreType);

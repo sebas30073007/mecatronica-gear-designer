@@ -36,7 +36,9 @@
       "WebSearch",
       "WebFetch(domain:replicad.xyz)",
       "WebFetch(domain:github.com)",
-      "Bash(python -c \"import ast, pathlib; [ast.parse\\(p.read_text\\(\\)\\) for p in pathlib.Path\\('.'\\).glob\\('*.py'\\)]; print\\('OK'\\)\")"
+      "Bash(python -c \"import ast, pathlib; [ast.parse\\(p.read_text\\(\\)\\) for p in pathlib.Path\\('.'\\).glob\\('*.py'\\)]; print\\('OK'\\)\")",
+      "Bash(Get-ChildItem -Path \"E:\\\\20_UNI\\\\Html proyects\\\\Claude_Gear_Lab\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)"
     ]
   }
 }

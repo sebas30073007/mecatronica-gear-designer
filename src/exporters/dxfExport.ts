@@ -6,6 +6,8 @@
 import { generateSpurGearOutline } from '../geometry/spurGear2D';
 import { generateBoreOutline } from '../geometry/borePath';
 import type { GearExportParams } from './svgExport';
+import type { PlanetaryParams } from '../core/gearTypes';
+import { planetaryRingTeeth } from '../core/gearTypes';
 
 export interface DxfExportOptions {
   showConstruction?: boolean;
@@ -149,4 +151,82 @@ export function exportGearPairDxf(
   entities.push(...centerLines(0, 0), ...centerLines(cx2, cy2));
 
   return buildDxf(entities);
+}
+
+// ── Planetary gear set ────────────────────────────────────────────────────────
+
+/** Full assembly DXF (combined). */
+export function exportPlanetaryDxf(params: PlanetaryParams, opts: DxfExportOptions = {}): string {
+  const { sunTeeth, planetTeeth, planetCount, moduleMm, pressureAngleDeg } = params;
+  const { showConstruction = true, showPitchCircle = true } = opts;
+  const ringTeeth = planetaryRingTeeth(params);
+  const orbit_r   = (sunTeeth + planetTeeth) * moduleMm / 2;
+  const r_wall    = (ringTeeth + 2.5) * moduleMm / 2 + 3;
+
+  const sunGeo  = generateSpurGearOutline({ teeth: sunTeeth,    moduleMm, pressureAngleDeg, quality: 24 });
+  const planGeo = generateSpurGearOutline({ teeth: planetTeeth, moduleMm, pressureAngleDeg, quality: 24 });
+  const ringGeo = generateSpurGearOutline({ teeth: ringTeeth,   moduleMm, pressureAngleDeg, quality: 24 });
+
+  const entities: string[] = [
+    dxfCircle(0, 0, r_wall, 'CUT'),
+    dxfPolyline(ringGeo.outline, 'CUT'),
+    dxfPolyline(sunGeo.outline, 'CUT'),
+    ...centerLines(0, 0),
+  ];
+
+  for (let i = 0; i < planetCount; i++) {
+    const θ  = (i / planetCount) * Math.PI * 2 - Math.PI / 2;
+    const px = orbit_r * Math.cos(θ), py = orbit_r * Math.sin(θ);
+    const phase = Math.PI / planetTeeth + (θ + Math.PI);
+    const rotated = planGeo.outline.map(p => {
+      const r = Math.hypot(p.x, p.y), a = Math.atan2(p.y, p.x) + phase;
+      return { x: px + r * Math.cos(a), y: py + r * Math.sin(a) };
+    });
+    entities.push(dxfPolyline(rotated, 'CUT'), ...centerLines(px, py));
+  }
+
+  if (showPitchCircle) {
+    entities.push(
+      dxfCircle(0, 0, sunGeo.pitchRadius,  'CONSTRUCTION'),
+      dxfCircle(0, 0, ringGeo.pitchRadius, 'CONSTRUCTION'),
+    );
+    for (let i = 0; i < planetCount; i++) {
+      const θ = (i / planetCount) * Math.PI * 2 - Math.PI / 2;
+      entities.push(dxfCircle(orbit_r * Math.cos(θ), orbit_r * Math.sin(θ), planGeo.pitchRadius, 'CONSTRUCTION'));
+    }
+  }
+  if (showConstruction) {
+    entities.push(
+      dxfCircle(0, 0, sunGeo.rootRadius, 'CONSTRUCTION'),
+      dxfCircle(0, 0, sunGeo.baseRadius, 'CONSTRUCTION'),
+    );
+  }
+
+  return buildDxf(entities);
+}
+
+/** Ring gear only. */
+export function exportRingGearDxf(params: PlanetaryParams, opts: DxfExportOptions = {}): string {
+  const { showConstruction = true, showPitchCircle = true } = opts;
+  const ringTeeth = planetaryRingTeeth(params);
+  const ringGeo   = generateSpurGearOutline({ teeth: ringTeeth, moduleMm: params.moduleMm, pressureAngleDeg: params.pressureAngleDeg, quality: 24 });
+  const r_wall    = (ringTeeth + 2.5) * params.moduleMm / 2 + 3;
+  const entities: string[] = [
+    dxfCircle(0, 0, r_wall, 'CUT'),
+    dxfPolyline(ringGeo.outline, 'CUT'),
+    ...centerLines(0, 0),
+  ];
+  if (showPitchCircle)  entities.push(dxfCircle(0, 0, ringGeo.pitchRadius, 'CONSTRUCTION'));
+  if (showConstruction) entities.push(dxfCircle(0, 0, r_wall, 'CONSTRUCTION'));
+  return buildDxf(entities);
+}
+
+/** Sun gear only — delegates to single-gear exporter. */
+export function exportSunGearDxf(p: PlanetaryParams, opts: DxfExportOptions = {}): string {
+  return exportSingleGearDxf({ teeth: p.sunTeeth, moduleMm: p.moduleMm, pressureAngleDeg: p.pressureAngleDeg, boreDiameterMm: Math.max(4, p.moduleMm * 2), label: `Sun-${p.sunTeeth}T` }, opts);
+}
+
+/** One planet gear — delegates to single-gear exporter. */
+export function exportPlanetGearDxf(p: PlanetaryParams, opts: DxfExportOptions = {}): string {
+  return exportSingleGearDxf({ teeth: p.planetTeeth, moduleMm: p.moduleMm, pressureAngleDeg: p.pressureAngleDeg, boreDiameterMm: Math.max(3, p.moduleMm * 1.5), label: `Planet-${p.planetTeeth}T` }, opts);
 }

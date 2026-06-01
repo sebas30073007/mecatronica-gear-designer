@@ -231,3 +231,84 @@ export function exportGearObj(params: GearMeshParams, label = 'gear'): string {
   ];
   return lines.join('\n');
 }
+
+// ── Ring gear (hollow cylinder — simplified for STL/OBJ) ──────────────────────
+// For accurate internal-teeth geometry use the STEP export.
+
+export interface RingGearMeshParams {
+  ringTeeth:       number;
+  moduleMm:        number;
+  thicknessMm:     number;
+  wallThicknessMm?: number;
+}
+
+function buildRingGearTriangles(p: RingGearMeshParams): Tri[] {
+  const wall   = p.wallThicknessMm ?? 3;
+  const thick  = p.thicknessMm;
+  const outerR = (p.ringTeeth + 2.5) * p.moduleMm / 2 + wall;
+  const innerR = (p.ringTeeth - 2)   * p.moduleMm / 2;   // inner addendum circle
+
+  const M     = 96;
+  const outer = circleXY(outerR, M);
+  const inner = circleXY(innerR, M);
+  const tris: Tri[] = [];
+
+  for (let i = 0; i < M; i++) {
+    const j = (i + 1) % M;
+    const [x0,y0] = outer[i]!, [x1,y1] = outer[j]!;
+    tris.push([[x0,y0,0], [x1,y1,0], [x1,y1,thick]]);
+    tris.push([[x0,y0,0], [x1,y1,thick], [x0,y0,thick]]);
+    const [a0,b0] = inner[i]!, [a1,b1] = inner[j]!;
+    tris.push([[a0,b0,0], [a1,b1,thick], [a1,b1,0]]);
+    tris.push([[a0,b0,0], [a0,b0,thick], [a1,b1,thick]]);
+  }
+
+  tris.push(...zipperCap(outer, inner, 0,     true));
+  tris.push(...zipperCap(outer, inner, thick, false));
+  return tris;
+}
+
+export function exportRingGearStl(p: RingGearMeshParams, label = 'ring-gear'): string {
+  const tris = buildRingGearTriangles(p);
+  const f4 = (n: number) => n.toFixed(4);
+  const f6 = (n: number) => n.toFixed(6);
+  const lines = [`solid ${label}`];
+  for (const t of tris) {
+    const n = triNormal(t);
+    lines.push(
+      `  facet normal ${f6(n[0])} ${f6(n[1])} ${f6(n[2])}`,
+      `    outer loop`,
+      `      vertex ${f4(t[0][0])} ${f4(t[0][1])} ${f4(t[0][2])}`,
+      `      vertex ${f4(t[1][0])} ${f4(t[1][1])} ${f4(t[1][2])}`,
+      `      vertex ${f4(t[2][0])} ${f4(t[2][1])} ${f4(t[2][2])}`,
+      `    endloop`,
+      `  endfacet`,
+    );
+  }
+  lines.push(`endsolid ${label}`);
+  return lines.join('\n');
+}
+
+export function exportRingGearObj(p: RingGearMeshParams, label = 'ring-gear'): string {
+  const tris = buildRingGearTriangles(p);
+  const f5 = (n: number) => n.toFixed(5);
+  const vKey = (v: Vec3) => `${f5(v[0])},${f5(v[1])},${f5(v[2])}`;
+  const vMap = new Map<string, number>(); const verts: Vec3[] = [];
+  const faces: [number,number,number][] = [];
+  const vIdx = (v: Vec3) => { const k = vKey(v); if (!vMap.has(k)) { vMap.set(k, verts.length); verts.push(v); } return vMap.get(k)!; };
+  for (const t of tris) faces.push([vIdx(t[0]), vIdx(t[1]), vIdx(t[2])]);
+  const vnAcc: [number,number,number][] = verts.map(() => [0,0,0]);
+  for (let fi = 0; fi < faces.length; fi++) {
+    const [a,b,c] = faces[fi]!; const n = triNormal(tris[fi]!);
+    for (const vi of [a,b,c]) { vnAcc[vi]![0]+=n[0]; vnAcc[vi]![1]+=n[1]; vnAcc[vi]![2]+=n[2]; }
+  }
+  const vn = vnAcc.map(v => { const l=Math.sqrt(v[0]**2+v[1]**2+v[2]**2); return l<1e-14?[0,0,1] as Vec3:[v[0]/l,v[1]/l,v[2]/l] as Vec3; });
+  return [
+    `# Ring Gear — z=${p.ringTeeth} m=${p.moduleMm} thickness=${p.thicknessMm}mm (simplified, no internal teeth)`,
+    `o ${label}`, ``,
+    ...verts.map(([x,y,z]) => `v  ${f5(x)}  ${f5(y)}  ${f5(z)}`), ``,
+    ...vn.map(([x,y,z]) => `vn ${f5(x)}  ${f5(y)}  ${f5(z)}`), ``,
+    `s off`,
+    ...faces.map(([a,b,c]) => `f ${a+1}//${a+1} ${b+1}//${b+1} ${c+1}//${c+1}`),
+  ].join('\n');
+}

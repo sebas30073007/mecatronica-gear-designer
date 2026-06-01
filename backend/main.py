@@ -195,6 +195,68 @@ async def step_export_rack(req: RackRequest):
     )
 
 
+class BevelGearRequest(BaseModel):
+    teeth:              int   = Field(..., ge=8,  le=400)
+    partner_teeth:      int   = Field(..., ge=8,  le=400)
+    module_mm:          float = Field(..., gt=0.3, le=50.0)
+    pressure_angle_deg: float = Field(20.0, ge=10.0, le=30.0)
+    face_width_mm:      float = Field(..., gt=0.5, le=200.0)
+    bore_mm: Optional[float]  = Field(None, ge=0.0)
+    label: str                = Field("bevel", max_length=64)
+
+
+def build_bevel_step(req: BevelGearRequest) -> bytes:
+    delta      = math.atan2(req.teeth, req.partner_teeth)   # cone half-angle of this gear
+    L          = (req.module_mm / 2) * math.sqrt(req.teeth**2 + req.partner_teeth**2)
+    taper      = max(0.20, (L - req.face_width_mm) / L)
+    ax_depth   = max(req.face_width_mm * math.cos(delta), 2.0)
+
+    pts_heel = spur_gear_outline(
+        teeth=req.teeth, module_mm=req.module_mm,
+        pressure_angle_deg=req.pressure_angle_deg, quality=16,
+    )
+    pts_toe = [(x * taper, y * taper) for x, y in pts_heel]
+
+    try:
+        wire_toe  = cq.Wire.makePolygon([cq.Vector(x, y, 0)        for x, y in pts_toe],  close=True)
+        wire_heel = cq.Wire.makePolygon([cq.Vector(x, y, ax_depth) for x, y in pts_heel], close=True)
+        solid  = cq.Solid.makeLoft([wire_toe, wire_heel], ruled=True)
+        result = cq.Workplane("XY").add(solid)
+    except Exception:
+        # Fallback: straight extrusion of heel profile
+        result = _build_solid(pts_heel, ax_depth)
+
+    if req.bore_mm and req.bore_mm > 0.5:
+        root_r_toe = req.module_mm * (req.teeth - 2.5) / 2 * taper
+        bore = min(req.bore_mm, root_r_toe * 1.5)
+        if bore > 0.5:
+            result = result.faces(">Z").workplane().circle(bore / 2).cutThruAll()
+
+    with tempfile.NamedTemporaryFile(suffix=".step", delete=False) as f:
+        tmp = f.name
+    try:
+        cq.exporters.export(result, tmp)
+        with open(tmp, "rb") as f:
+            return f.read()
+    finally:
+        os.unlink(tmp)
+
+
+@app.post("/step-export/bevel")
+async def step_export_bevel(req: BevelGearRequest):
+    try:
+        data = build_bevel_step(req)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    filename = f"bevel-{req.label}-{req.teeth}T-M{req.module_mm}.step"
+    return Response(
+        content=data,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "gear-step-api"}

@@ -71,3 +71,21 @@ export async function exportRackStep(req: RackStepRequest): Promise<void> {
     `rack-${req.label}-${req.n_teeth}T-M${req.module_mm}.step`,
   );
 }
+
+export interface BevelStepRequest {
+  teeth:              number;
+  partner_teeth:      number;
+  module_mm:          number;
+  pressure_angle_deg: number;
+  face_width_mm:      number;
+  bore_mm:            number | null;
+  label:              string;
+}
+
+export async function exportBevelGearStep(req: BevelStepRequest): Promise<void> {
+  await stepFetch(
+    '/step-export/bevel',
+    req,
+    `bevel-${req.label}-${req.teeth}T-M${req.module_mm}.step`,
+  );
+}

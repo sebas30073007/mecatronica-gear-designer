@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type {
   GearDesignState, SpurGear, ViewMode, BoreType,
   FabricationMode, FabricationState2D, FabricationState3D,
-  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams, WormParams,
+  RackPinionParams, InternalGearParams, PlanetaryParams, HelicalParams, WormParams, BevelParams,
 } from '../core/gearTypes';
 
 const g1: SpurGear = {
@@ -58,6 +58,12 @@ const defaultHerringbone: HelicalParams = {
   helixAngleDeg: 20, thicknessMm: 20,
 };
 
+const defaultBevel: BevelParams = {
+  pinionTeeth: 16, gearTeeth: 24,
+  moduleMm: 2, pressureAngleDeg: 20,
+  faceWidthMm: 10,
+};
+
 const defaultWorm: WormParams = {
   starts: 2, wheelTeeth: 40,
   moduleMm: 2, pressureAngleDeg: 20,
@@ -111,6 +117,9 @@ interface GearStore extends GearDesignState {
   // Worm gear state
   worm: WormParams;
   setWorm: (u: Partial<WormParams>) => void;
+  // Bevel gear state
+  bevel: BevelParams;
+  setBevel: (u: Partial<BevelParams>) => void;
   // Fabrication state
   fabricationMode: FabricationMode;
   fab2d: FabricationState2D;
@@ -128,6 +137,7 @@ export const useGearStore = create<GearStore>()((set) => ({
   helical: defaultHelical,
   herringbone: defaultHerringbone,
   worm: defaultWorm,
+  bevel: defaultBevel,
   fabricationMode: '2d-laser',
   fab2d: defaultFab2d,
   fab3d: defaultFab3d,
@@ -158,6 +168,7 @@ export const useGearStore = create<GearStore>()((set) => ({
   setHelical: (u) => set((s) => ({ helical: { ...s.helical, ...u } })),
   setHerringbone: (u) => set((s) => ({ herringbone: { ...s.herringbone, ...u } })),
   setWorm: (u) => set((s) => ({ worm: { ...s.worm, ...u } })),
+  setBevel: (u) => set((s) => ({ bevel: { ...s.bevel, ...u } })),
   setFabricationMode: (fabricationMode) => set({ fabricationMode }),
   setFab2d: (updates) => set((s) => ({ fab2d: { ...s.fab2d, ...updates } })),
   setFab3d: (updates) => set((s) => ({ fab3d: { ...s.fab3d, ...updates } })),
